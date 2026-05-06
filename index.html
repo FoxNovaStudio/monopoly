@@ -300,15 +300,6 @@
       <button class="btn btn-outline" onclick="payToBank()">Maksa pankille ← minulta</button>
     </div>
 
-    <!-- Vain hostille -->
-    <div id="host-panel" style="display:none">
-      <div class="card">
-        <h2>👑 Pelinjohtajan toiminnot</h2>
-        <div style="font-size:0.72rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">Valitse pelaaja:</div>
-        <div class="players-list" id="bank-players"></div>
-        <button class="btn btn-red" onclick="bankruptPlayer()">Julistaa konkurssin</button>
-      </div>
-    </div>
 
     <div class="card">
       <h2><span class="status-dot"></span>Tapahtumaloki</h2>
@@ -444,7 +435,6 @@ function updateUI() {
   } else if (status === 'started') {
     if (document.getElementById('screen-game').style.display === 'none') {
       showScreen('game');
-      if (isHost) document.getElementById('host-panel').style.display = 'block';
     }
     renderGame(players);
   }
@@ -484,52 +474,6 @@ function renderGame(players) {
       <span class="pbal${p.balance<200?' low':''}">${p.balance.toLocaleString('fi-FI')}€</span>
     </div>`).join('') || '<div style="font-size:0.75rem;color:rgba(245,240,232,0.3);">Ei muita pelaajia</div>';
 
-  // Host: pankkipelaajat
-  if (isHost) {
-    const bankEl = document.getElementById('bank-players');
-    bankEl.innerHTML = Object.values(players).map(p => `
-      <div class="player-row${p.bankrupt?' bankrupt':''}${selectedTarget===p.id?' selected':''}"
-           onclick="selectTarget('${p.id}')">
-        <span class="pname">${p.name}${p.id===myId?' (sinä)':''}</span>
-        <span class="pbal${p.balance<200?' low':''}">${p.balance.toLocaleString('fi-FI')}€</span>
-      </div>`).join('');
-  }
-
-  // Loki
-  const log = gameData.log || {};
-  const logEl = document.getElementById('log-list');
-  const entries = Object.values(log).sort((a,b) => (b.ts||0)-(a.ts||0)).slice(0,30);
-  logEl.innerHTML = entries.map(e =>
-    `<div class="log-item"><span>${e.text}</span><span class="log-amt">${e.amount||''}</span></div>`
-  ).join('') || '<div class="log-item"><span>Ei tapahtumia</span></div>';
-
-  // Tapahtuma
-  if (gameData.event && gameData.event.ts > Date.now() - 6000) {
-    const ev = gameData.event;
-    document.getElementById('event-container').innerHTML = `
-      <div class="event-banner"><span class="event-icon">${ev.icon}</span><span class="event-text">${ev.text}</span></div>`;
-  } else {
-    document.getElementById('event-container').innerHTML = '';
-  }
-
-  // Voittaja
-  const active = Object.values(players).filter(p => !p.bankrupt);
-  if (active.length === 1 && Object.values(players).length > 1) {
-    document.getElementById('winner-container').innerHTML = `
-      <div class="winner-banner"><h2>🏆 ${active[0].name} voitti!</h2><p style="font-size:0.8rem;color:rgba(245,240,232,0.5)">Onnittelut!</p></div>`;
-  }
-
-  // Ilmoitukset
-  const notif = gameData.notification;
-  if (notif && notif.ts > Date.now() - 4000) {
-    if (notif.type === 'transfer' && notif.toId === myId && notif.ts !== lastNotifTs) {
-      lastNotifTs = notif.ts;
-      showToast('💸', `Sait rahaa!`, `${notif.fromName} lähetti sinulle ${notif.amount}€`);
-    } else if (notif.type === 'bank_withdraw' && notif.toId === 'all' && notif.fromName !== myName && notif.ts !== lastNotifTs) {
-      lastNotifTs = notif.ts;
-      showToast('🏦', `Pankkinosto!`, `${notif.fromName} nosti pankista ${notif.amount}€`);
-    }
-  }
 }
 
 // ========== TOIMINNOT ==========
@@ -561,7 +505,8 @@ async function sendMoney() {
   if (!me || !target) return;
   if (me.balance < amt) { err.textContent = 'Sinulla ei ole tarpeeksi rahaa.'; return; }
 
-  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance - amt);
+  const newBalance = me.balance - amt;
+  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(newBalance);
   await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + amt);
   await addLog(`${me.name} → ${target.name}`, `${amt}€`);
   await db.ref(`games/${gameCode}/notification`).set({
@@ -572,21 +517,30 @@ async function sendMoney() {
     ts: Date.now()
   });
 
+  // Automaattinen konkurssi jos saldo menee miinukselle
+  if (newBalance < 0) {
+    await db.ref(`games/${gameCode}/players/${myId}`).update({ bankrupt: true, balance: 0 });
+    await addLog(`${me.name} meni konkurssiin!`, '☠');
+    await db.ref(`games/${gameCode}/notification`).set({
+      type: 'bankrupt',
+      toId: 'all',
+      fromName: me.name,
+      amount: 0,
+      ts: Date.now() + 1
+    });
+  }
+
   document.getElementById('send-amount').value = '';
-  suc.textContent = `Lähetit ${amt}€ pelaajalle ${target.name}!`;
+  suc.textContent = newBalance < 0 ? `Menit konkurssiin!` : `Lähetit ${amt}€ pelaajalle ${target.name}!`;
   setTimeout(() => suc.textContent = '', 2500);
 }
 
-async function bankPayPlayer() {
-  if (!selectedTarget) { alert('Valitse pelaaja ensin.'); return; }
   const target = gameData.players[selectedTarget];
   if (!target) return;
   await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + 200);
   await addLog(`Pankki → ${target.name} (ohita lähtö)`, '+200€');
 }
 
-async function bankruptPlayer() {
-  if (!selectedTarget) { alert('Valitse pelaaja ensin.'); return; }
   const target = gameData.players[selectedTarget];
   if (!target) return;
   if (!confirm(`Julistetaanko ${target.name} konkurssiin?`)) return;
@@ -594,15 +548,6 @@ async function bankruptPlayer() {
   await addLog(`${target.name} julistettiin konkurssiin`, '☠');
 }
 
-async function triggerRandomEvent() {
-  const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
-  const players = gameData.players || {};
-  const updates = {};
-  Object.values(players).forEach(p => {
-    if (!p.bankrupt) {
-      const newBal = Math.max(0, p.balance + ev.amount);
-      updates[`games/${gameCode}/players/${p.id}/balance`] = newBal;
-    }
   });
   updates[`games/${gameCode}/event`] = { icon: ev.icon, text: ev.text, ts: Date.now() };
   await db.ref().update(updates);
