@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
     --green: #1a472a;
@@ -177,6 +178,25 @@
 
   @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
 
+  .qr-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem auto 0;
+    width: fit-content;
+  }
+  .qr-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #333;
+    margin-top: 0.5rem;
+    font-family: 'DM Mono', monospace;
+  }
+
   .toast-overlay {
     position: fixed;
     inset: 0;
@@ -235,7 +255,11 @@
     <div class="game-code-box">
       <div class="game-code-label">Pelikoodi — jaa tämä kavereille</div>
       <div class="game-code" id="lobby-code">----</div>
-      <div class="game-code-hint">Muut kirjoittavat tämän koodin liittyäkseen</div>
+      <div class="game-code-hint">Tai skannaa QR-koodi suoraan</div>
+      <div class="qr-box">
+        <div id="lobby-qr"></div>
+        <div class="qr-label">Skannaa liittyäkseen</div>
+      </div>
     </div>
     <div class="card">
       <h2>Pelaajat liittyneet <span class="waiting-dots"></span></h2>
@@ -356,6 +380,31 @@ function genCode() {
   return Math.random().toString(36).substring(2,6).toUpperCase();
 }
 
+function generateQR(code) {
+  const el = document.getElementById('lobby-qr');
+  el.innerHTML = '';
+  const joinUrl = window.location.href.split('?')[0] + '?join=' + code;
+  new QRCode(el, {
+    text: joinUrl,
+    width: 160,
+    height: 160,
+    colorDark: '#0f1f14',
+    colorLight: '#ffffff',
+  });
+}
+
+// Tarkista URL-parametri sivun latautuessa (QR-skannauksesta)
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(window.location.search);
+  const joinCode = params.get('join');
+  if (joinCode) {
+    document.getElementById('join-code').value = joinCode.toUpperCase();
+    document.getElementById('join-name').focus();
+    // Vieritä liity-osioon
+    document.getElementById('join-name').scrollIntoView({ behavior: 'smooth' });
+  }
+});
+
 function genId() {
   return Math.random().toString(36).substring(2,10);
 }
@@ -383,6 +432,7 @@ async function createGame() {
   showScreen('lobby');
   document.getElementById('lobby-code').textContent = gameCode;
   listenGame();
+  generateQR(gameCode);
 }
 
 // ========== LIITTYMINEN ==========
