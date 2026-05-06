@@ -474,6 +474,35 @@ function renderGame(players) {
       <span class="pbal${p.balance<200?' low':''}">${p.balance.toLocaleString('fi-FI')}€</span>
     </div>`).join('') || '<div style="font-size:0.75rem;color:rgba(245,240,232,0.3);">Ei muita pelaajia</div>';
 
+  // Loki
+  const log = gameData.log || {};
+  const logEl = document.getElementById('log-list');
+  const entries = Object.values(log).sort((a,b) => (b.ts||0)-(a.ts||0)).slice(0,30);
+  logEl.innerHTML = entries.map(e =>
+    `<div class="log-item"><span>${e.text}</span><span class="log-amt">${e.amount||''}</span></div>`
+  ).join('') || '<div class="log-item"><span>Ei tapahtumia</span></div>';
+
+  // Voittaja
+  const active = Object.values(players).filter(p => !p.bankrupt);
+  if (active.length === 1 && Object.values(players).length > 1) {
+    document.getElementById('winner-container').innerHTML =
+      '<div class="winner-banner"><h2>\u{1F3C6} ' + active[0].name + ' voitti!</h2><p style="font-size:0.8rem;color:rgba(245,240,232,0.5)">Onnittelut!</p></div>';
+  }
+
+  // Ilmoitukset
+  const notif = gameData.notification;
+  if (notif && notif.ts > Date.now() - 4000) {
+    if (notif.type === 'transfer' && notif.toId === myId && notif.ts !== lastNotifTs) {
+      lastNotifTs = notif.ts;
+      showToast('\u{1F4B8}', 'Sait rahaa!', notif.fromName + ' lahetti sinulle ' + notif.amount + '\u20AC');
+    } else if (notif.type === 'bank_withdraw' && notif.toId === 'all' && notif.fromName !== myName && notif.ts !== lastNotifTs) {
+      lastNotifTs = notif.ts;
+      showToast('\u{1F3E6}', 'Pankkinosto!', notif.fromName + ' nosti pankista ' + notif.amount + '\u20AC');
+    } else if (notif.type === 'bankrupt' && notif.toId === 'all' && notif.fromName !== myName && notif.ts !== lastNotifTs) {
+      lastNotifTs = notif.ts;
+      showToast('\u2620\uFE0F', 'Konkurssi!', notif.fromName + ' meni konkurssiin!');
+    }
+  }
 }
 
 // ========== TOIMINNOT ==========
