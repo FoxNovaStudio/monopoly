@@ -535,24 +535,6 @@ async function sendMoney() {
   setTimeout(() => suc.textContent = '', 2500);
 }
 
-  const target = gameData.players[selectedTarget];
-  if (!target) return;
-  await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + 200);
-  await addLog(`Pankki → ${target.name} (ohita lähtö)`, '+200€');
-}
-
-  const target = gameData.players[selectedTarget];
-  if (!target) return;
-  if (!confirm(`Julistetaanko ${target.name} konkurssiin?`)) return;
-  await db.ref(`games/${gameCode}/players/${selectedTarget}`).update({ bankrupt: true, balance: 0 });
-  await addLog(`${target.name} julistettiin konkurssiin`, '☠');
-}
-
-  });
-  updates[`games/${gameCode}/event`] = { icon: ev.icon, text: ev.text, ts: Date.now() };
-  await db.ref().update(updates);
-  await addLog(`Tapahtuma: ${ev.text}`, `${ev.amount > 0 ? '+' : ''}${ev.amount}€ kaikille`);
-}
 
 function setBankAmt(n) {
   document.getElementById('bank-amount').value = n;
