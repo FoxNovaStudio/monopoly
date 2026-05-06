@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monopolin Pankkiiri</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --green: #1a472a;
+    --gold: #c9a84c;
+    --gold-light: #f0c96a;
+    --cream: #f5f0e8;
+    --dark: #0f1f14;
+    --card-bg: #1e3a28;
+    --red: #c0392b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--dark);
+    color: var(--cream);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(201,168,76,0.05) 39px,rgba(201,168,76,0.05) 40px),
+      repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(201,168,76,0.05) 39px,rgba(201,168,76,0.05) 40px);
+  }
+  header { text-align:center; padding:1.5rem 1rem 1rem; border-bottom:1px solid rgba(201,168,76,0.3); margin-bottom:1.5rem; }
+  header h1 { font-family:'Playfair Display',serif; font-size:clamp(1.6rem,5vw,2.5rem); color:var(--gold); }
+  header p { font-size:0.7rem; color:rgba(245,240,232,0.4); letter-spacing:0.2em; text-transform:uppercase; margin-top:0.25rem; }
+  .container { max-width:480px; margin:0 auto; padding:0 1rem 4rem; }
+
+  .card {
+    background:var(--card-bg);
+    border:1px solid rgba(201,168,76,0.25);
+    border-radius:6px;
+    padding:1.25rem;
+    margin-bottom:1rem;
+  }
+  .card h2 { font-family:'Playfair Display',serif; color:var(--gold); font-size:1rem; margin-bottom:1rem; border-bottom:1px solid rgba(201,168,76,0.15); padding-bottom:0.5rem; }
+
+  input[type=text], input[type=number] {
+    background:rgba(0,0,0,0.3);
+    border:1px solid rgba(201,168,76,0.2);
+    border-radius:4px;
+    color:var(--cream);
+    font-family:'DM Mono',monospace;
+    font-size:0.85rem;
+    padding:0.6rem 0.75rem;
+    width:100%;
+    outline:none;
+    margin-bottom:0.5rem;
+    transition:border-color 0.2s;
+  }
+  input:focus { border-color:var(--gold); }
+
+  .btn {
+    width:100%;
+    padding:0.75rem;
+    border:none;
+    border-radius:4px;
+    font-family:'DM Mono',monospace;
+    font-size:0.85rem;
+    font-weight:500;
+    cursor:pointer;
+    letter-spacing:0.05em;
+    transition:opacity 0.15s, transform 0.1s;
+    margin-bottom:0.5rem;
+  }
+  .btn:active { transform:scale(0.98); }
+  .btn-gold { background:var(--gold); color:var(--dark); }
+  .btn-gold:hover { background:var(--gold-light); }
+  .btn-outline { background:rgba(201,168,76,0.1); color:var(--gold); border:1px solid rgba(201,168,76,0.3); }
+  .btn-outline:hover { background:rgba(201,168,76,0.2); }
+  .btn-red { background:rgba(192,57,43,0.15); color:#e74c3c; border:1px solid rgba(192,57,43,0.3); }
+
+  .game-code-box {
+    text-align:center;
+    background:rgba(201,168,76,0.08);
+    border:1px solid rgba(201,168,76,0.3);
+    border-radius:6px;
+    padding:1rem;
+    margin-bottom:1rem;
+  }
+  .game-code-label { font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:rgba(245,240,232,0.4); margin-bottom:0.25rem; }
+  .game-code { font-family:'Playfair Display',serif; font-size:2.5rem; color:var(--gold); letter-spacing:0.15em; }
+  .game-code-hint { font-size:0.7rem; color:rgba(245,240,232,0.4); margin-top:0.25rem; }
+
+  .my-balance-box {
+    text-align:center;
+    background:rgba(201,168,76,0.06);
+    border:1px solid rgba(201,168,76,0.2);
+    border-radius:6px;
+    padding:1.25rem;
+    margin-bottom:1rem;
+  }
+  .my-name { font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(245,240,232,0.4); margin-bottom:0.25rem; }
+  .my-balance-num { font-family:'Playfair Display',serif; font-size:3rem; color:var(--gold); line-height:1; }
+  .my-balance-num.low { color:var(--red); }
+  .balance-euro { font-size:1.2rem; opacity:0.6; }
+
+  .players-list { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:0.75rem; }
+  .player-row {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:rgba(0,0,0,0.2);
+    border:1px solid rgba(201,168,76,0.1);
+    border-radius:4px;
+    padding:0.6rem 0.75rem;
+    cursor:pointer;
+    transition:border-color 0.15s, background 0.15s;
+  }
+  .player-row:hover { border-color:rgba(201,168,76,0.4); background:rgba(201,168,76,0.05); }
+  .player-row.selected { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+  .player-row.me { opacity:0.4; pointer-events:none; }
+  .player-row.bankrupt { opacity:0.3; pointer-events:none; }
+  .pname { font-size:0.8rem; }
+  .pbal { font-size:0.85rem; color:var(--gold); }
+  .pbal.low { color:var(--red); }
+  .pme-tag { font-size:0.6rem; color:rgba(201,168,76,0.5); margin-left:0.4rem; }
+
+  .quick-row { display:flex; gap:0.4rem; margin-bottom:0.5rem; flex-wrap:wrap; }
+  .quick-btn {
+    background:rgba(201,168,76,0.1);
+    border:1px solid rgba(201,168,76,0.2);
+    border-radius:3px;
+    color:var(--gold);
+    font-family:'DM Mono',monospace;
+    font-size:0.7rem;
+    padding:0.35rem 0.6rem;
+    cursor:pointer;
+  }
+  .quick-btn:hover { background:rgba(201,168,76,0.2); }
+
+  .event-banner {
+    background:rgba(201,168,76,0.08);
+    border:1px solid rgba(201,168,76,0.3);
+    border-radius:4px;
+    padding:0.75rem 1rem;
+    margin-bottom:1rem;
+    font-size:0.8rem;
+    display:flex;
+    align-items:center;
+    gap:0.75rem;
+    animation:slideIn 0.3s ease;
+  }
+  .event-icon { font-size:1.2rem; }
+  .event-text { color:var(--gold-light); line-height:1.4; }
+
+  .log-list { max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem; }
+  .log-list::-webkit-scrollbar { width:3px; }
+  .log-list::-webkit-scrollbar-thumb { background:rgba(201,168,76,0.3); border-radius:2px; }
+  .log-item { font-size:0.7rem; color:rgba(245,240,232,0.45); padding:0.3rem 0; border-bottom:1px solid rgba(201,168,76,0.06); display:flex; justify-content:space-between; gap:1rem; }
+  .log-amt { color:rgba(201,168,76,0.65); white-space:nowrap; }
+
+  .waiting-dots::after { content:'...'; animation:dots 1.2s infinite steps(4,end); }
+  @keyframes dots { 0%,100%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+
+  .error { color:var(--red); font-size:0.72rem; margin-top:0.25rem; min-height:1rem; }
+  .success { color:#4caf50; font-size:0.72rem; margin-top:0.25rem; min-height:1rem; }
+
+  .status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#4caf50; margin-right:6px; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .winner-banner {
+    text-align:center;
+    background:rgba(201,168,76,0.1);
+    border:2px solid var(--gold);
+    border-radius:8px;
+    padding:2rem;
+    margin-bottom:1rem;
+  }
+  .winner-banner h2 { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--gold); margin-bottom:0.5rem; }
+
+  @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Monopolin Pankkiiri</h1>
+  <p>Moninpeli — jokainen omalla puhelimella</p>
+</header>
+
+<div class="container">
+
+  <!-- NÄYTTÖ 1: ALOITUS -->
+  <div id="screen-start">
+    <div class="card">
+      <h2>Luo uusi peli</h2>
+      <input type="text" id="create-name" placeholder="Sinun nimesi" maxlength="16">
+      <input type="number" id="create-balance" placeholder="Aloitussaldo (esim. 1500)" value="1500" min="100">
+      <button class="btn btn-gold" onclick="createGame()">Luo peli →</button>
+    </div>
+    <div class="card">
+      <h2>Liity peliin</h2>
+      <input type="text" id="join-name" placeholder="Sinun nimesi" maxlength="16">
+      <input type="text" id="join-code" placeholder="Pelikoodi (4 kirjainta)" maxlength="4" style="text-transform:uppercase">
+      <button class="btn btn-outline" onclick="joinGame()">Liity peliin →</button>
+      <div class="error" id="join-error"></div>
+    </div>
+  </div>
+
+  <!-- NÄYTTÖ 2: ODOTUSHUONE (host) -->
+  <div id="screen-lobby" style="display:none">
+    <div class="game-code-box">
+      <div class="game-code-label">Pelikoodi — jaa tämä kavereille</div>
+      <div class="game-code" id="lobby-code">----</div>
+      <div class="game-code-hint">Muut kirjoittavat tämän koodin liittyäkseen</div>
+    </div>
+    <div class="card">
+      <h2>Pelaajat liittyneet <span class="waiting-dots"></span></h2>
+      <div class="players-list" id="lobby-players"></div>
+      <button class="btn btn-gold" id="start-game-btn" onclick="startGame()" style="margin-top:0.5rem">Aloita peli →</button>
+    </div>
+  </div>
+
+  <!-- NÄYTTÖ 3: ODOTA PELIN ALKUA (joiner) -->
+  <div id="screen-waiting" style="display:none">
+    <div class="game-code-box">
+      <div class="game-code-label">Liitytty peliin</div>
+      <div class="game-code" id="waiting-code">----</div>
+    </div>
+    <div class="card">
+      <h2>Odotetaan pelinjohtajaa <span class="waiting-dots"></span></h2>
+      <div class="players-list" id="waiting-players"></div>
+    </div>
+  </div>
+
+  <!-- NÄYTTÖ 4: PELI KÄYNNISSÄ -->
+  <div id="screen-game" style="display:none">
+
+    <div id="event-container"></div>
+    <div id="winner-container"></div>
+
+    <div class="my-balance-box">
+      <div class="my-name" id="my-name-display">—</div>
+      <div class="my-balance-num" id="my-balance-display">0<span class="balance-euro">€</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Lähetä rahaa</h2>
+      <div style="font-size:0.72rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">Valitse vastaanottaja:</div>
+      <div class="players-list" id="game-players"></div>
+      <div class="quick-row" style="margin-top:0.75rem;">
+        <span style="font-size:0.7rem;color:rgba(245,240,232,0.35);align-self:center;">Pikasumma:</span>
+        <button class="quick-btn" onclick="setAmt(50)">50€</button>
+        <button class="quick-btn" onclick="setAmt(100)">100€</button>
+        <button class="quick-btn" onclick="setAmt(200)">200€</button>
+        <button class="quick-btn" onclick="setAmt(500)">500€</button>
+      </div>
+      <input type="number" id="send-amount" placeholder="Summa €" min="1">
+      <div class="error" id="send-error"></div>
+      <div class="success" id="send-success"></div>
+      <button class="btn btn-gold" onclick="sendMoney()" style="margin-top:0.25rem">Lähetä →</button>
+    </div>
+
+    <!-- Vain hostille -->
+    <div id="host-panel" style="display:none">
+      <div class="card">
+        <h2>Pankkitoiminnot</h2>
+        <div style="font-size:0.72rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">Valitse pelaaja:</div>
+        <div class="players-list" id="bank-players"></div>
+        <button class="btn btn-outline" style="margin-top:0.75rem" onclick="bankPayPlayer()">Pankki maksaa +200€ (ohita lähtö)</button>
+        <button class="btn btn-red" onclick="bankruptPlayer()">Julistaa konkurssin</button>
+        <button class="btn btn-outline" onclick="triggerRandomEvent()">Arvo satunnainen tapahtuma 🎲</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="status-dot"></span>Tapahtumaloki</h2>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ========== FIREBASE CONFIG ==========
+// HUOM: Korvaa tämä omalla Firebase-konfiguraatiollasi!
+// 1. Mene https://console.firebase.google.com
+// 2. Luo uusi projekti (ilmainen)
+// 3. Lisää web-sovellus
+// 4. Kopioi config tähän
+// 5. Laita Realtime Database säännöt: { "rules": { ".read": true, ".write": true } }
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDY-wvZUU8MMtBdru-lKZVZfAc_Z3Z0G_w",
+  authDomain: "monopoly-pankkiiri.firebaseapp.com",
+  databaseURL: "https://monopoly-pankkiiri-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "monopoly-pankkiiri",
+  storageBucket: "monopoly-pankkiiri.firebasestorage.app",
+  messagingSenderId: "228996352471",
+  appId: "1:228996352471:web:184b44d57ad03c8cf8a392"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ========== TILA ==========
+let myName = '';
+let myId = '';
+let gameCode = '';
+let isHost = false;
+let selectedTarget = null;
+let gameRef = null;
+let gameData = null;
+
+const EVENTS = [
+  { icon:"🎉", text:"Kaupunginjuhlat! Jokainen saa 50€.", amount:50 },
+  { icon:"🔧", text:"Vesiputki rikkoutui. Jokainen maksaa 30€.", amount:-30 },
+  { icon:"💰", text:"Veronpalautus! Jokainen saa 75€.", amount:75 },
+  { icon:"🌩️", text:"Myrsky tuhosi katuja. Jokainen maksaa 50€.", amount:-50 },
+  { icon:"🎁", text:"Kaupunkilahjotus! Jokainen saa 25€.", amount:25 },
+  { icon:"📈", text:"Pörssikurssit nousivat. Jokainen saa 100€.", amount:100 },
+  { icon:"🏥", text:"Sairaalakulut. Jokainen maksaa 40€.", amount:-40 },
+];
+
+function genCode() {
+  return Math.random().toString(36).substring(2,6).toUpperCase();
+}
+
+function genId() {
+  return Math.random().toString(36).substring(2,10);
+}
+
+// ========== LUOMINEN ==========
+async function createGame() {
+  const name = document.getElementById('create-name').value.trim();
+  const balance = parseInt(document.getElementById('create-balance').value) || 1500;
+  if (!name) { alert('Kirjoita nimesi!'); return; }
+
+  myName = name;
+  myId = genId();
+  gameCode = genCode();
+  isHost = true;
+
+  const player = { id: myId, name: myName, balance, bankrupt: false };
+  await db.ref(`games/${gameCode}`).set({
+    status: 'lobby',
+    startBalance: balance,
+    hostId: myId,
+    players: { [myId]: player },
+    log: { init: { text: 'Peli luotu', amount: '', ts: Date.now() } }
+  });
+
+  showScreen('lobby');
+  document.getElementById('lobby-code').textContent = gameCode;
+  listenGame();
+}
+
+// ========== LIITTYMINEN ==========
+async function joinGame() {
+  const name = document.getElementById('join-name').value.trim();
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const err = document.getElementById('join-error');
+  err.textContent = '';
+
+  if (!name) { err.textContent = 'Kirjoita nimesi.'; return; }
+  if (code.length !== 4) { err.textContent = 'Kirjoita 4-kirjaiminen koodi.'; return; }
+
+  const snap = await db.ref(`games/${code}`).get();
+  if (!snap.exists()) { err.textContent = 'Peliä ei löydy. Tarkista koodi.'; return; }
+  const data = snap.val();
+  if (data.status === 'started') { err.textContent = 'Peli on jo alkanut.'; return; }
+
+  myName = name;
+  myId = genId();
+  gameCode = code;
+  isHost = false;
+
+  await db.ref(`games/${gameCode}/players/${myId}`).set({
+    id: myId, name: myName, balance: data.startBalance, bankrupt: false
+  });
+
+  showScreen('waiting');
+  document.getElementById('waiting-code').textContent = gameCode;
+  listenGame();
+}
+
+// ========== KUUNTELU ==========
+function listenGame() {
+  gameRef = db.ref(`games/${gameCode}`);
+  gameRef.on('value', snap => {
+    if (!snap.exists()) return;
+    gameData = snap.val();
+    updateUI();
+  });
+}
+
+function updateUI() {
+  const players = gameData.players || {};
+  const status = gameData.status;
+
+  if (status === 'lobby') {
+    renderLobbyPlayers(players);
+  } else if (status === 'waiting') {
+    renderWaitingPlayers(players);
+  } else if (status === 'started') {
+    if (document.getElementById('screen-game').style.display === 'none') {
+      showScreen('game');
+      if (isHost) document.getElementById('host-panel').style.display = 'block';
+    }
+    renderGame(players);
+  }
+}
+
+function renderLobbyPlayers(players) {
+  const el = document.getElementById('lobby-players');
+  el.innerHTML = Object.values(players).map(p =>
+    `<div class="player-row"><span class="pname">${p.name}${p.id===myId?' (sinä)':''}</span><span class="pbal">${p.balance}€</span></div>`
+  ).join('');
+}
+
+function renderWaitingPlayers(players) {
+  const el = document.getElementById('waiting-players');
+  el.innerHTML = Object.values(players).map(p =>
+    `<div class="player-row"><span class="pname">${p.name}${p.id===myId?' (sinä)':''}</span></div>`
+  ).join('');
+}
+
+function renderGame(players) {
+  const me = players[myId];
+  if (!me) return;
+
+  // Oma saldo
+  document.getElementById('my-name-display').textContent = me.name;
+  const balEl = document.getElementById('my-balance-display');
+  balEl.innerHTML = `${me.balance.toLocaleString('fi-FI')}<span class="balance-euro">€</span>`;
+  balEl.className = 'my-balance-num' + (me.balance < 200 ? ' low' : '');
+
+  // Muut pelaajat (lähetä rahaa)
+  const gameEl = document.getElementById('game-players');
+  const others = Object.values(players).filter(p => p.id !== myId);
+  gameEl.innerHTML = others.map(p => `
+    <div class="player-row${p.bankrupt?' bankrupt':''}${selectedTarget===p.id?' selected':''}"
+         onclick="selectTarget('${p.id}')">
+      <span class="pname">${p.name}${p.bankrupt?' ☠':''}${p.id===gameData.hostId?' 👑':''}</span>
+      <span class="pbal${p.balance<200?' low':''}">${p.balance.toLocaleString('fi-FI')}€</span>
+    </div>`).join('') || '<div style="font-size:0.75rem;color:rgba(245,240,232,0.3);">Ei muita pelaajia</div>';
+
+  // Host: pankkipelaajat
+  if (isHost) {
+    const bankEl = document.getElementById('bank-players');
+    bankEl.innerHTML = Object.values(players).map(p => `
+      <div class="player-row${p.bankrupt?' bankrupt':''}${selectedTarget===p.id?' selected':''}"
+           onclick="selectTarget('${p.id}')">
+        <span class="pname">${p.name}${p.id===myId?' (sinä)':''}</span>
+        <span class="pbal${p.balance<200?' low':''}">${p.balance.toLocaleString('fi-FI')}€</span>
+      </div>`).join('');
+  }
+
+  // Loki
+  const log = gameData.log || {};
+  const logEl = document.getElementById('log-list');
+  const entries = Object.values(log).sort((a,b) => (b.ts||0)-(a.ts||0)).slice(0,30);
+  logEl.innerHTML = entries.map(e =>
+    `<div class="log-item"><span>${e.text}</span><span class="log-amt">${e.amount||''}</span></div>`
+  ).join('') || '<div class="log-item"><span>Ei tapahtumia</span></div>';
+
+  // Tapahtuma
+  if (gameData.event && gameData.event.ts > Date.now() - 6000) {
+    const ev = gameData.event;
+    document.getElementById('event-container').innerHTML = `
+      <div class="event-banner"><span class="event-icon">${ev.icon}</span><span class="event-text">${ev.text}</span></div>`;
+  } else {
+    document.getElementById('event-container').innerHTML = '';
+  }
+
+  // Voittaja
+  const active = Object.values(players).filter(p => !p.bankrupt);
+  if (active.length === 1 && Object.values(players).length > 1) {
+    document.getElementById('winner-container').innerHTML = `
+      <div class="winner-banner"><h2>🏆 ${active[0].name} voitti!</h2><p style="font-size:0.8rem;color:rgba(245,240,232,0.5)">Onnittelut!</p></div>`;
+  }
+}
+
+// ========== TOIMINNOT ==========
+async function startGame() {
+  await db.ref(`games/${gameCode}/status`).set('started');
+  await addLog('Peli alkoi!', '');
+}
+
+function selectTarget(id) {
+  selectedTarget = id;
+  updateUI();
+}
+
+function setAmt(n) {
+  document.getElementById('send-amount').value = n;
+}
+
+async function sendMoney() {
+  const err = document.getElementById('send-error');
+  const suc = document.getElementById('send-success');
+  err.textContent = ''; suc.textContent = '';
+
+  if (!selectedTarget) { err.textContent = 'Valitse vastaanottaja ensin.'; return; }
+  const amt = parseInt(document.getElementById('send-amount').value);
+  if (!amt || amt <= 0) { err.textContent = 'Syötä kelvollinen summa.'; return; }
+
+  const me = gameData.players[myId];
+  const target = gameData.players[selectedTarget];
+  if (!me || !target) return;
+  if (me.balance < amt) { err.textContent = 'Sinulla ei ole tarpeeksi rahaa.'; return; }
+
+  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance - amt);
+  await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + amt);
+  await addLog(`${me.name} → ${target.name}`, `${amt}€`);
+
+  document.getElementById('send-amount').value = '';
+  suc.textContent = `Lähetit ${amt}€ pelaajalle ${target.name}!`;
+  setTimeout(() => suc.textContent = '', 2500);
+}
+
+async function bankPayPlayer() {
+  if (!selectedTarget) { alert('Valitse pelaaja ensin.'); return; }
+  const target = gameData.players[selectedTarget];
+  if (!target) return;
+  await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + 200);
+  await addLog(`Pankki → ${target.name} (ohita lähtö)`, '+200€');
+}
+
+async function bankruptPlayer() {
+  if (!selectedTarget) { alert('Valitse pelaaja ensin.'); return; }
+  const target = gameData.players[selectedTarget];
+  if (!target) return;
+  if (!confirm(`Julistetaanko ${target.name} konkurssiin?`)) return;
+  await db.ref(`games/${gameCode}/players/${selectedTarget}`).update({ bankrupt: true, balance: 0 });
+  await addLog(`${target.name} julistettiin konkurssiin`, '☠');
+}
+
+async function triggerRandomEvent() {
+  const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+  const players = gameData.players || {};
+  const updates = {};
+  Object.values(players).forEach(p => {
+    if (!p.bankrupt) {
+      const newBal = Math.max(0, p.balance + ev.amount);
+      updates[`games/${gameCode}/players/${p.id}/balance`] = newBal;
+    }
+  });
+  updates[`games/${gameCode}/event`] = { icon: ev.icon, text: ev.text, ts: Date.now() };
+  await db.ref().update(updates);
+  await addLog(`Tapahtuma: ${ev.text}`, `${ev.amount > 0 ? '+' : ''}${ev.amount}€ kaikille`);
+}
+
+async function addLog(text, amount) {
+  const key = Date.now().toString();
+  await db.ref(`games/${gameCode}/log/${key}`).set({ text, amount, ts: Date.now() });
+}
+
+// ========== APUFUNKTIOT ==========
+function showScreen(name) {
+  ['start','lobby','waiting','game'].forEach(s => {
+    document.getElementById(`screen-${s}`).style.display = s === name ? 'block' : 'none';
+  });
+}
+</script>
+</body>
+</html>
