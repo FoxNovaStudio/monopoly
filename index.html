@@ -206,7 +206,7 @@
 </head>
 <body>
 
-<header>
+<header id="main-header">
   <h1>Monopolin Pankkiiri</h1>
   <p>Moninpeli — jokainen omalla puhelimella</p>
 </header>
@@ -399,6 +399,11 @@ async function joinGame() {
   if (!snap.exists()) { err.textContent = 'Peliä ei löydy. Tarkista koodi.'; return; }
   const data = snap.val();
   if (data.status === 'started') { err.textContent = 'Peli on jo alkanut.'; return; }
+
+  // Tarkista ettei sama nimi ole jo pelissä
+  const existingPlayers = Object.values(data.players || {});
+  const nameTaken = existingPlayers.some(p => p.name.toLowerCase() === name.toLowerCase());
+  if (nameTaken) { err.textContent = 'Tämä nimi on jo käytössä pelissä. Valitse toinen nimi.'; return; }
 
   myName = name;
   myId = genId();
@@ -633,6 +638,8 @@ function showScreen(name) {
   ['start','lobby','waiting','game'].forEach(s => {
     document.getElementById(`screen-${s}`).style.display = s === name ? 'block' : 'none';
   });
+  // Piilota header kun ollaan pelissä
+  document.getElementById('main-header').style.display = name === 'game' ? 'none' : 'block';
 }
 </script>
 </body>
