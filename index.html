@@ -259,13 +259,30 @@
       <button class="btn btn-gold" onclick="sendMoney()" style="margin-top:0.25rem">Lähetä →</button>
     </div>
 
+    <!-- Pankkitoiminnot kaikille pelaajille -->
+    <div class="card">
+      <h2>🏦 Pankki</h2>
+      <div class="quick-row">
+        <span style="font-size:0.7rem;color:rgba(245,240,232,0.35);align-self:center;">Pikasumma:</span>
+        <button class="quick-btn" onclick="setBankAmt(50)">50€</button>
+        <button class="quick-btn" onclick="setBankAmt(100)">100€</button>
+        <button class="quick-btn" onclick="setBankAmt(200)">200€</button>
+        <button class="quick-btn" onclick="setBankAmt(500)">500€</button>
+      </div>
+      <input type="number" id="bank-amount" placeholder="Summa €" min="1" style="margin-top:0.5rem">
+      <div class="error" id="bank-error"></div>
+      <div class="success" id="bank-success"></div>
+      <button class="btn btn-gold" onclick="withdrawFromBank()" style="margin-top:0.25rem">Nosta pankista → minulle</button>
+      <button class="btn btn-outline" onclick="payToBank()">Maksa pankille ← minulta</button>
+    </div>
+
     <!-- Vain hostille -->
     <div id="host-panel" style="display:none">
       <div class="card">
-        <h2>Pankkitoiminnot</h2>
+        <h2>👑 Pelinjohtajan toiminnot</h2>
         <div style="font-size:0.72rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">Valitse pelaaja:</div>
         <div class="players-list" id="bank-players"></div>
-        <button class="btn btn-outline" style="margin-top:0.75rem" onclick="bankPayPlayer()">Pankki maksaa +200€ (ohita lähtö)</button>
+        <button class="btn btn-outline" style="margin-top:0.75rem" onclick="bankPayPlayer()">Pankki maksaa +200€ valitulle (ohita lähtö)</button>
         <button class="btn btn-red" onclick="bankruptPlayer()">Julistaa konkurssin</button>
         <button class="btn btn-outline" onclick="triggerRandomEvent()">Arvo satunnainen tapahtuma 🎲</button>
       </div>
@@ -548,6 +565,41 @@ async function triggerRandomEvent() {
   updates[`games/${gameCode}/event`] = { icon: ev.icon, text: ev.text, ts: Date.now() };
   await db.ref().update(updates);
   await addLog(`Tapahtuma: ${ev.text}`, `${ev.amount > 0 ? '+' : ''}${ev.amount}€ kaikille`);
+}
+
+function setBankAmt(n) {
+  document.getElementById('bank-amount').value = n;
+}
+
+async function withdrawFromBank() {
+  const err = document.getElementById('bank-error');
+  const suc = document.getElementById('bank-success');
+  err.textContent = ''; suc.textContent = '';
+  const amt = parseInt(document.getElementById('bank-amount').value);
+  if (!amt || amt <= 0) { err.textContent = 'Syötä kelvollinen summa.'; return; }
+  const me = gameData.players[myId];
+  if (!me) return;
+  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance + amt);
+  await addLog(`${me.name} nosti pankista`, `+${amt}€`);
+  document.getElementById('bank-amount').value = '';
+  suc.textContent = `Nostit ${amt}€ pankista!`;
+  setTimeout(() => suc.textContent = '', 2500);
+}
+
+async function payToBank() {
+  const err = document.getElementById('bank-error');
+  const suc = document.getElementById('bank-success');
+  err.textContent = ''; suc.textContent = '';
+  const amt = parseInt(document.getElementById('bank-amount').value);
+  if (!amt || amt <= 0) { err.textContent = 'Syötä kelvollinen summa.'; return; }
+  const me = gameData.players[myId];
+  if (!me) return;
+  if (me.balance < amt) { err.textContent = 'Sinulla ei ole tarpeeksi rahaa.'; return; }
+  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance - amt);
+  await addLog(`${me.name} maksoi pankille`, `-${amt}€`);
+  document.getElementById('bank-amount').value = '';
+  suc.textContent = `Maksoit ${amt}€ pankille!`;
+  setTimeout(() => suc.textContent = '', 2500);
 }
 
 async function addLog(text, amount) {
