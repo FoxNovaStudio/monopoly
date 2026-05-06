@@ -176,6 +176,31 @@
   .winner-banner h2 { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--gold); margin-bottom:0.5rem; }
 
   @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+  .toast-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+  }
+  .toast-box {
+    background: var(--card-bg);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    text-align: center;
+    max-width: 300px;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .toast-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .toast-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold); margin-bottom: 0.5rem; }
+  .toast-msg { font-size: 0.85rem; color: rgba(245,240,232,0.7); line-height: 1.5; }
+  .toast-close { margin-top: 1.25rem; background: var(--gold); color: var(--dark); border: none; border-radius: 4px; padding: 0.5rem 1.5rem; font-family: 'DM Mono', monospace; font-size: 0.8rem; cursor: pointer; }
+  @keyframes popIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 </style>
 </head>
@@ -267,7 +292,6 @@
         <button class="quick-btn" onclick="setBankAmt(50)">50€</button>
         <button class="quick-btn" onclick="setBankAmt(100)">100€</button>
         <button class="quick-btn" onclick="setBankAmt(200)">200€</button>
-        <button class="quick-btn" onclick="setBankAmt(500)">500€</button>
       </div>
       <input type="number" id="bank-amount" placeholder="Summa €" min="1" style="margin-top:0.5rem">
       <div class="error" id="bank-error"></div>
@@ -282,9 +306,7 @@
         <h2>👑 Pelinjohtajan toiminnot</h2>
         <div style="font-size:0.72rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">Valitse pelaaja:</div>
         <div class="players-list" id="bank-players"></div>
-        <button class="btn btn-outline" style="margin-top:0.75rem" onclick="bankPayPlayer()">Pankki maksaa +200€ valitulle (ohita lähtö)</button>
         <button class="btn btn-red" onclick="bankruptPlayer()">Julistaa konkurssin</button>
-        <button class="btn btn-outline" onclick="triggerRandomEvent()">Arvo satunnainen tapahtuma 🎲</button>
       </div>
     </div>
 
@@ -327,6 +349,7 @@ let isHost = false;
 let selectedTarget = null;
 let gameRef = null;
 let gameData = null;
+let lastNotifTs = 0;
 
 const EVENTS = [
   { icon:"🎉", text:"Kaupunginjuhlat! Jokainen saa 50€.", amount:50 },
@@ -495,6 +518,18 @@ function renderGame(players) {
     document.getElementById('winner-container').innerHTML = `
       <div class="winner-banner"><h2>🏆 ${active[0].name} voitti!</h2><p style="font-size:0.8rem;color:rgba(245,240,232,0.5)">Onnittelut!</p></div>`;
   }
+
+  // Ilmoitukset
+  const notif = gameData.notification;
+  if (notif && notif.ts > Date.now() - 4000) {
+    if (notif.type === 'transfer' && notif.toId === myId && notif.ts !== lastNotifTs) {
+      lastNotifTs = notif.ts;
+      showToast('💸', `Sait rahaa!`, `${notif.fromName} lähetti sinulle ${notif.amount}€`);
+    } else if (notif.type === 'bank_withdraw' && notif.toId === 'all' && notif.fromName !== myName && notif.ts !== lastNotifTs) {
+      lastNotifTs = notif.ts;
+      showToast('🏦', `Pankkinosto!`, `${notif.fromName} nosti pankista ${notif.amount}€`);
+    }
+  }
 }
 
 // ========== TOIMINNOT ==========
@@ -529,6 +564,13 @@ async function sendMoney() {
   await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance - amt);
   await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + amt);
   await addLog(`${me.name} → ${target.name}`, `${amt}€`);
+  await db.ref(`games/${gameCode}/notification`).set({
+    type: 'transfer',
+    toId: selectedTarget,
+    fromName: me.name,
+    amount: amt,
+    ts: Date.now()
+  });
 
   document.getElementById('send-amount').value = '';
   suc.textContent = `Lähetit ${amt}€ pelaajalle ${target.name}!`;
@@ -581,6 +623,13 @@ async function withdrawFromBank() {
   if (!me) return;
   await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance + amt);
   await addLog(`${me.name} nosti pankista`, `+${amt}€`);
+  await db.ref(`games/${gameCode}/notification`).set({
+    type: 'bank_withdraw',
+    toId: 'all',
+    fromName: me.name,
+    amount: amt,
+    ts: Date.now()
+  });
   document.getElementById('bank-amount').value = '';
   suc.textContent = `Nostit ${amt}€ pankista!`;
   setTimeout(() => suc.textContent = '', 2500);
@@ -605,6 +654,22 @@ async function payToBank() {
 async function addLog(text, amount) {
   const key = Date.now().toString();
   await db.ref(`games/${gameCode}/log/${key}`).set({ text, amount, ts: Date.now() });
+}
+
+function showToast(icon, title, msg) {
+  if (document.getElementById('toast-overlay')) return;
+  const el = document.createElement('div');
+  el.id = 'toast-overlay';
+  el.className = 'toast-overlay';
+  el.innerHTML = `
+    <div class="toast-box">
+      <div class="toast-icon">${icon}</div>
+      <div class="toast-title">${title}</div>
+      <div class="toast-msg">${msg}</div>
+      <button class="toast-close" onclick="document.getElementById('toast-overlay').remove()">OK</button>
+    </div>`;
+  document.body.appendChild(el);
+  setTimeout(() => { const t = document.getElementById('toast-overlay'); if(t) t.remove(); }, 6000);
 }
 
 // ========== APUFUNKTIOT ==========
