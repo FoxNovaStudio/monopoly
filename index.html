@@ -1,741 +1,685 @@
-<!DOCTYPE html>
-<html lang="fi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Monopolin Pankkiiri</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap">
 <style>
-  :root {
-    --green: #1a472a;
-    --gold: #c9a84c;
-    --gold-light: #f0c96a;
-    --cream: #f5f0e8;
-    --dark: #0f1f14;
-    --card-bg: #1e3a28;
-    --red: #c0392b;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--dark);
-    color: var(--cream);
-    font-family: 'DM Mono', monospace;
-    min-height: 100vh;
-    background-image:
-      repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(201,168,76,0.05) 39px,rgba(201,168,76,0.05) 40px),
-      repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(201,168,76,0.05) 39px,rgba(201,168,76,0.05) 40px);
-  }
-  header { text-align:center; padding:1.5rem 1rem 1rem; border-bottom:1px solid rgba(201,168,76,0.3); margin-bottom:1.5rem; }
-  header h1 { font-family:'Playfair Display',serif; font-size:clamp(1.6rem,5vw,2.5rem); color:var(--gold); }
-  header p { font-size:0.7rem; color:rgba(245,240,232,0.4); letter-spacing:0.2em; text-transform:uppercase; margin-top:0.25rem; }
-  .container { max-width:480px; margin:0 auto; padding:0 1rem 4rem; }
-
-  .card {
-    background:var(--card-bg);
-    border:1px solid rgba(201,168,76,0.25);
-    border-radius:6px;
-    padding:1.25rem;
-    margin-bottom:1rem;
-  }
-  .card h2 { font-family:'Playfair Display',serif; color:var(--gold); font-size:1rem; margin-bottom:1rem; border-bottom:1px solid rgba(201,168,76,0.15); padding-bottom:0.5rem; }
-
-  input[type=text], input[type=number] {
-    background:rgba(0,0,0,0.3);
-    border:1px solid rgba(201,168,76,0.2);
-    border-radius:4px;
-    color:var(--cream);
-    font-family:'DM Mono',monospace;
-    font-size:0.85rem;
-    padding:0.6rem 0.75rem;
-    width:100%;
-    outline:none;
-    margin-bottom:0.5rem;
-    transition:border-color 0.2s;
-  }
-  input:focus { border-color:var(--gold); }
-
-  .btn {
-    width:100%;
-    padding:0.75rem;
-    border:none;
-    border-radius:4px;
-    font-family:'DM Mono',monospace;
-    font-size:0.85rem;
-    font-weight:500;
-    cursor:pointer;
-    letter-spacing:0.05em;
-    transition:opacity 0.15s, transform 0.1s;
-    margin-bottom:0.5rem;
-  }
-  .btn:active { transform:scale(0.98); }
-  .btn-gold { background:var(--gold); color:var(--dark); }
-  .btn-gold:hover { background:var(--gold-light); }
-  .btn-outline { background:rgba(201,168,76,0.1); color:var(--gold); border:1px solid rgba(201,168,76,0.3); }
-  .btn-outline:hover { background:rgba(201,168,76,0.2); }
-  .btn-red { background:rgba(192,57,43,0.15); color:#e74c3c; border:1px solid rgba(192,57,43,0.3); }
-
-  .game-code-box {
-    text-align:center;
-    background:rgba(201,168,76,0.08);
-    border:1px solid rgba(201,168,76,0.3);
-    border-radius:6px;
-    padding:1rem;
-    margin-bottom:1rem;
-  }
-  .game-code-label { font-size:0.65rem; letter-spacing:0.2em; text-transform:uppercase; color:rgba(245,240,232,0.4); margin-bottom:0.25rem; }
-  .game-code { font-family:'Playfair Display',serif; font-size:2.5rem; color:var(--gold); letter-spacing:0.15em; }
-  .game-code-hint { font-size:0.7rem; color:rgba(245,240,232,0.4); margin-top:0.25rem; }
-
-  .my-balance-box {
-    text-align:center;
-    background:rgba(201,168,76,0.06);
-    border:1px solid rgba(201,168,76,0.2);
-    border-radius:6px;
-    padding:1.25rem;
-    margin-bottom:1rem;
-  }
-  .my-name { font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(245,240,232,0.4); margin-bottom:0.25rem; }
-  .my-balance-num { font-family:'Playfair Display',serif; font-size:3rem; color:var(--gold); line-height:1; }
-  .my-balance-num.low { color:var(--red); }
-  .balance-euro { font-size:1.2rem; opacity:0.6; }
-
-  .players-list { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:0.75rem; }
-  .player-row {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    background:rgba(0,0,0,0.2);
-    border:1px solid rgba(201,168,76,0.1);
-    border-radius:4px;
-    padding:0.6rem 0.75rem;
-    cursor:pointer;
-    transition:border-color 0.15s, background 0.15s;
-  }
-  .player-row:hover { border-color:rgba(201,168,76,0.4); background:rgba(201,168,76,0.05); }
-  .player-row.selected { border-color:var(--gold); background:rgba(201,168,76,0.08); }
-  .player-row.me { opacity:0.4; pointer-events:none; }
-  .player-row.bankrupt { opacity:0.3; pointer-events:none; }
-  .pname { font-size:0.8rem; }
-  .pbal { font-size:0.85rem; color:var(--gold); }
-  .pbal.low { color:var(--red); }
-  .pme-tag { font-size:0.6rem; color:rgba(201,168,76,0.5); margin-left:0.4rem; }
-
-  .quick-row { display:flex; gap:0.4rem; margin-bottom:0.5rem; flex-wrap:wrap; }
-  .quick-btn {
-    background:rgba(201,168,76,0.1);
-    border:1px solid rgba(201,168,76,0.2);
-    border-radius:3px;
-    color:var(--gold);
-    font-family:'DM Mono',monospace;
-    font-size:0.7rem;
-    padding:0.35rem 0.6rem;
-    cursor:pointer;
-  }
-  .quick-btn:hover { background:rgba(201,168,76,0.2); }
-
-  .event-banner {
-    background:rgba(201,168,76,0.08);
-    border:1px solid rgba(201,168,76,0.3);
-    border-radius:4px;
-    padding:0.75rem 1rem;
-    margin-bottom:1rem;
-    font-size:0.8rem;
-    display:flex;
-    align-items:center;
-    gap:0.75rem;
-    animation:slideIn 0.3s ease;
-  }
-  .event-icon { font-size:1.2rem; }
-  .event-text { color:var(--gold-light); line-height:1.4; }
-
-  .log-list { max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem; }
-  .log-list::-webkit-scrollbar { width:3px; }
-  .log-list::-webkit-scrollbar-thumb { background:rgba(201,168,76,0.3); border-radius:2px; }
-  .log-item { font-size:0.7rem; color:rgba(245,240,232,0.45); padding:0.3rem 0; border-bottom:1px solid rgba(201,168,76,0.06); display:flex; justify-content:space-between; gap:1rem; }
-  .log-amt { color:rgba(201,168,76,0.65); white-space:nowrap; }
-
-  .waiting-dots::after { content:'...'; animation:dots 1.2s infinite steps(4,end); }
-  @keyframes dots { 0%,100%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
-
-  .error { color:var(--red); font-size:0.72rem; margin-top:0.25rem; min-height:1rem; }
-  .success { color:#4caf50; font-size:0.72rem; margin-top:0.25rem; min-height:1rem; }
-
-  .status-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#4caf50; margin-right:6px; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  .winner-banner {
-    text-align:center;
-    background:rgba(201,168,76,0.1);
-    border:2px solid var(--gold);
-    border-radius:8px;
-    padding:2rem;
-    margin-bottom:1rem;
-  }
-  .winner-banner h2 { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--gold); margin-bottom:0.5rem; }
-
-  @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-
-  .qr-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 1rem auto 0;
-    width: fit-content;
-  }
-  .qr-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #333;
-    margin-top: 0.5rem;
-    font-family: 'DM Mono', monospace;
-  }
-
-  .toast-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    animation: fadeIn 0.2s ease;
-  }
-  .toast-box {
-    background: var(--card-bg);
-    border: 2px solid var(--gold);
-    border-radius: 12px;
-    padding: 2rem 2.5rem;
-    text-align: center;
-    max-width: 300px;
-    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  .toast-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
-  .toast-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold); margin-bottom: 0.5rem; }
-  .toast-msg { font-size: 0.85rem; color: rgba(245,240,232,0.7); line-height: 1.5; }
-  .toast-close { margin-top: 1.25rem; background: var(--gold); color: var(--dark); border: none; border-radius: 4px; padding: 0.5rem 1.5rem; font-family: 'DM Mono', monospace; font-size: 0.8rem; cursor: pointer; }
-  @keyframes popIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
-  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-
-  .fs-btn {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 9000;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    background: rgba(15,31,20,0.85);
-    border: 1px solid rgba(201,168,76,0.5);
-    color: var(--gold);
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .fs-btn:active { transform: scale(0.94); }
-</style>
-</head>
-<body>
-
-<button class="fs-btn" id="fs-btn" onclick="toggleFullscreen()" aria-label="Koko näyttö">⛶</button>
-
-<header id="main-header">
-  <h1>Monopolin Pankkiiri</h1>
-  <p>Moninpeli — jokainen omalla puhelimella</p>
-</header>
-
-<div class="container">
-
-  <!-- NÄYTTÖ 1: ALOITUS -->
-  <div id="screen-start">
-    <div class="card">
-      <h2>Luo uusi peli</h2>
-      <input type="text" id="create-name" placeholder="Sinun nimesi" maxlength="16">
-      <input type="number" id="create-balance" placeholder="Aloitussaldo (esim. 1500)" value="1500" min="100">
-      <button class="btn btn-gold" onclick="createGame()">Luo peli →</button>
-    </div>
-    <div class="card">
-      <h2>Liity peliin</h2>
-      <input type="text" id="join-name" placeholder="Sinun nimesi" maxlength="16">
-      <input type="text" id="join-code" placeholder="Pelikoodi (4 kirjainta)" maxlength="4" style="text-transform:uppercase">
-      <button class="btn btn-outline" onclick="joinGame()">Liity peliin →</button>
-      <div class="error" id="join-error"></div>
-    </div>
-  </div>
-
-  <!-- NÄYTTÖ 2: ODOTUSHUONE (host) -->
-  <div id="screen-lobby" style="display:none">
-    <div class="game-code-box">
-      <div class="game-code-label">Pelikoodi — jaa tämä kavereille</div>
-      <div class="game-code" id="lobby-code">----</div>
-      <div class="game-code-hint">Tai skannaa QR-koodi suoraan</div>
-      <div class="qr-box">
-        <div id="lobby-qr"></div>
-        <div class="qr-label">Skannaa liittyäkseen</div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Pelaajat liittyneet <span class="waiting-dots"></span></h2>
-      <div class="players-list" id="lobby-players"></div>
-      <button class="btn btn-gold" id="start-game-btn" onclick="startGame()" style="margin-top:0.5rem">Aloita peli →</button>
-    </div>
-  </div>
-
-  <!-- NÄYTTÖ 3: ODOTA PELIN ALKUA (joiner) -->
-  <div id="screen-waiting" style="display:none">
-    <div class="game-code-box">
-      <div class="game-code-label">Liitytty peliin</div>
-      <div class="game-code" id="waiting-code">----</div>
-    </div>
-    <div class="card">
-      <h2>Odotetaan pelinjohtajaa <span class="waiting-dots"></span></h2>
-      <div class="players-list" id="waiting-players"></div>
-    </div>
-  </div>
-
-  <!-- NÄYTTÖ 4: PELI KÄYNNISSÄ -->
-  <div id="screen-game" style="display:none">
-
-    <div id="event-container"></div>
-    <div id="winner-container"></div>
-
-    <div class="my-balance-box">
-      <div class="my-name" id="my-name-display">—</div>
-      <div class="my-balance-num" id="my-balance-display">0<span class="balance-euro">€</span></div>
-    </div>
-
-    <div class="card">
-      <h2>Lähetä rahaa</h2>
-      <div style="font-size:0.72rem;color:rgba(245,240,232,0.4);margin-bottom:0.5rem;">Valitse vastaanottaja:</div>
-      <div class="players-list" id="game-players"></div>
-      <div class="quick-row" style="margin-top:0.75rem;">
-        <span style="font-size:0.7rem;color:rgba(245,240,232,0.35);align-self:center;">Pikasumma:</span>
-        <button class="quick-btn" onclick="setAmt(50)">50€</button>
-        <button class="quick-btn" onclick="setAmt(100)">100€</button>
-        <button class="quick-btn" onclick="setAmt(200)">200€</button>
-        <button class="quick-btn" onclick="setAmt(500)">500€</button>
-      </div>
-      <input type="number" id="send-amount" placeholder="Summa €" min="1">
-      <div class="error" id="send-error"></div>
-      <div class="success" id="send-success"></div>
-      <button class="btn btn-gold" onclick="sendMoney()" style="margin-top:0.25rem">Lähetä →</button>
-    </div>
-
-    <!-- Pankkitoiminnot kaikille pelaajille -->
-    <div class="card">
-      <h2>🏦 Pankki</h2>
-      <div class="quick-row">
-        <span style="font-size:0.7rem;color:rgba(245,240,232,0.35);align-self:center;">Pikasumma:</span>
-        <button class="quick-btn" onclick="setBankAmt(50)">50€</button>
-        <button class="quick-btn" onclick="setBankAmt(100)">100€</button>
-        <button class="quick-btn" onclick="setBankAmt(200)">200€</button>
-      </div>
-      <input type="number" id="bank-amount" placeholder="Summa €" min="1" style="margin-top:0.5rem">
-      <div class="error" id="bank-error"></div>
-      <div class="success" id="bank-success"></div>
-      <button class="btn btn-gold" onclick="withdrawFromBank()" style="margin-top:0.25rem">Nosta pankista → minulle</button>
-      <button class="btn btn-outline" onclick="payToBank()">Maksa pankille ← minulta</button>
-    </div>
-
-
-    <div class="card">
-      <h2><span class="status-dot"></span>Tapahtumaloki</h2>
-      <div class="log-list" id="log-list"></div>
-    </div>
-
-  </div>
-
-</div>
-
-<script>
-// ========== FIREBASE CONFIG ==========
-// HUOM: Korvaa tämä omalla Firebase-konfiguraatiollasi!
-// 1. Mene https://console.firebase.google.com
-// 2. Luo uusi projekti (ilmainen)
-// 3. Lisää web-sovellus
-// 4. Kopioi config tähän
-// 5. Laita Realtime Database säännöt: { "rules": { ".read": true, ".write": true } }
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDY-wvZUU8MMtBdru-lKZVZfAc_Z3Z0G_w",
-  authDomain: "monopoly-pankkiiri.firebaseapp.com",
-  databaseURL: "https://monopoly-pankkiiri-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "monopoly-pankkiiri",
-  storageBucket: "monopoly-pankkiiri.firebasestorage.app",
-  messagingSenderId: "228996352471",
-  appId: "1:228996352471:web:184b44d57ad03c8cf8a392"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-// ========== TILA ==========
-let myName = '';
-let myId = '';
-let gameCode = '';
-let isHost = false;
-let selectedTarget = null;
-let gameRef = null;
-let gameData = null;
-let lastNotifTs = 0;
-
-const EVENTS = [
-  { icon:"🎉", text:"Kaupunginjuhlat! Jokainen saa 50€.", amount:50 },
-  { icon:"🔧", text:"Vesiputki rikkoutui. Jokainen maksaa 30€.", amount:-30 },
-  { icon:"💰", text:"Veronpalautus! Jokainen saa 75€.", amount:75 },
-  { icon:"🌩️", text:"Myrsky tuhosi katuja. Jokainen maksaa 50€.", amount:-50 },
-  { icon:"🎁", text:"Kaupunkilahjotus! Jokainen saa 25€.", amount:25 },
-  { icon:"📈", text:"Pörssikurssit nousivat. Jokainen saa 100€.", amount:100 },
-  { icon:"🏥", text:"Sairaalakulut. Jokainen maksaa 40€.", amount:-40 },
-];
-
-function genCode() {
-  return Math.random().toString(36).substring(2,6).toUpperCase();
+/* Layout: yksi kapea sarake pelipöydän vihreällä huovalla. Saldo on suurin asia, kolikon kullalla. */
+:root{
+  color-scheme:dark;
+  --bg:#0f1f14; --card:#1a3324; --card2:#142a1d; --ink:#f5f0e8; --muted:#9db3a3; --line:#2f5a40;
+  --gold:#c9a84c; --gold2:#f0c96a; --on-gold:#10200f; --red:#e8695a; --ok:#6fcf97;
+  --display:'Playfair Display',Georgia,'Times New Roman',serif;
+  --mono:'DM Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
 }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--bg);
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(201,168,76,.05) 39px,rgba(201,168,76,.05) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(201,168,76,.05) 39px,rgba(201,168,76,.05) 40px);
+  color:var(--ink); font-family:var(--mono); font-size:15px; line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:16px 48px; min-height:100%;
+}
+h1,h2,h3,p{margin:0}
+.topbar{max-width:30rem;margin:0 auto 12px;display:flex;justify-content:flex-end}
+.fsbtn{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:4px 12px;font:inherit;font-size:.8rem;color:var(--gold);background:transparent;border:1px solid var(--line);border-radius:4px;cursor:pointer}
+.fsbtn svg{width:16px;height:16px}
+.wrap{max-width:30rem;margin-inline:auto;display:flex;flex-direction:column;gap:16px;min-width:0}
+.tab{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+h1.word{font-family:var(--display);font-weight:900;font-size:2.3rem;line-height:1.05;color:var(--gold);text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.1rem;color:var(--gold);text-wrap:balance}
+.lede{color:var(--muted)}
+.hint{font-size:.8rem;color:var(--muted)}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+label{font-size:.78rem;letter-spacing:.04em;color:var(--muted)}
+input[type=text],input[type=number]{width:100%;font:inherit;color:var(--ink);background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:4px;padding:11px 12px;min-height:46px}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--gold2);outline-offset:2px}
+input:disabled{opacity:.45}
+input#code{font-size:1.4rem;letter-spacing:.35em;text-align:center}
+.btn{font:inherit;font-weight:500;min-height:46px;padding:10px 16px;border-radius:4px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;letter-spacing:.03em}
+.btn.gold{background:var(--gold);color:var(--on-gold);border-color:var(--gold)}
+.btn.red{border-color:var(--red);color:var(--red)}
+.btn.red.armed{background:var(--red);color:#1c0b08}
+.btn.ghost{border-color:var(--line);color:var(--muted)}
+.btn.small{min-height:36px;padding:4px 12px;font-size:.8rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{min-width:0}
+.row .btn{flex:1}
+.net{font-size:.85rem;color:var(--muted)}
+.net.bad,.err{color:var(--red)}
+.err{font-size:.8rem;min-height:1.1em}
+.ok{color:var(--ok);font-size:.8rem;min-height:1.1em}
+.note{border-left:3px solid var(--gold);padding-left:10px;font-size:.88rem}
+.codebig{font-size:3rem;letter-spacing:.3em;padding-left:.3em}
+.qr{background:#fff;padding:12px;border-radius:4px;width:min(220px,100%);align-self:center;line-height:0}
+.qr svg{width:100%;height:auto;display:block}
+.pl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.pl li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);min-height:46px}
+.pl li:first-child{border-top:0}
+.pn{min-width:0;overflow-wrap:anywhere}
+.badge{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:2px 6px;margin-left:6px;white-space:nowrap}
+.me-box{background:var(--card2);border:1px solid var(--gold);border-radius:6px;padding:18px 16px;text-align:center;display:flex;flex-direction:column;gap:6px}
+.me-name{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+.me-bal{font-family:var(--display);font-weight:900;font-size:3rem;line-height:1.05;color:var(--gold);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.me-bal.low{color:var(--red)}
+.stamp{align-self:center;font-family:var(--display);font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--red);border:3px double var(--red);padding:4px 14px;transform:rotate(-3deg)}
+.win{border:2px solid var(--gold);border-radius:6px;padding:18px;text-align:center;font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--gold);text-wrap:balance}
+.rc{display:flex;flex-direction:column;gap:6px}
+.rcp{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;font:inherit;color:var(--ink);background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-height:46px;cursor:pointer}
+.rcp.sel{border-color:var(--gold);background:rgba(201,168,76,.1)}
+.rcp:disabled{opacity:.4;cursor:not-allowed}
+.rcp b{font-weight:500;overflow-wrap:anywhere;min-width:0}
+.rcp span{color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:8px}
+.dot.off{background:var(--line)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:.78rem;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid var(--line);border-radius:3px;padding:6px 10px;min-height:34px;cursor:pointer}
+.log{display:flex;flex-direction:column;max-height:240px;overflow-y:auto}
+.log div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid rgba(47,90,64,.6);font-size:.78rem;color:var(--muted)}
+.log div:first-child{border-top:0}
+.log b{font-weight:500;color:var(--gold);white-space:nowrap}
+details.sheet summary{cursor:pointer;font-weight:500;color:var(--gold);min-height:32px;display:flex;align-items:center}
+details.sheet[open] summary{margin-bottom:6px}
+.ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.78);display:grid;place-items:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.tbox{background:var(--card);border:2px solid var(--gold);border-radius:12px;padding:28px 24px;text-align:center;width:min(22rem,100%);display:flex;flex-direction:column;gap:10px;align-items:center}
+.tbox.bust{border-color:var(--red)}
+.tbox .th{font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--gold)}
+.tbox.bust .th{color:var(--red)}
+.tbox .ta{font-family:var(--display);font-weight:900;font-size:2.6rem;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.tbox p{color:var(--muted)}
+.tbox .btn{width:100%;margin-top:8px}
+@media (prefers-reduced-motion:no-preference){
+  .tbox{animation:pop .25s ease-out both}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+}
+</style>
 
-function generateQR(code) {
-  const el = document.getElementById('lobby-qr');
-  el.innerHTML = '';
-  const joinUrl = window.location.href.split('?')[0] + '?join=' + code;
-  new QRCode(el, {
-    text: joinUrl,
-    width: 160,
-    height: 160,
-    colorDark: '#0f1f14',
-    colorLight: '#ffffff',
+<div class="topbar" id="topbar" hidden><button class="fsbtn" id="fsbtn" type="button"></button></div>
+<div class="wrap" id="app"></div>
+<div id="toasts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+// Sivun julkinen osoite QR-koodia varten. Jätä tyhjäksi, niin käytetään sivun omaa osoitetta.
+var BASE = '';
+
+var MAXP = 8, MAXV = 1000000000;
+var $app = document.getElementById('app'), $toasts = document.getElementById('toasts');
+var esc = function(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
+var rand = function(n){ return Math.floor(Math.random()*n); };
+var rid = function(n){ var a='abcdefghijklmnopqrstuvwxyz0123456789', s=''; for(var i=0;i<n;i++) s+=a.charAt(rand(a.length)); return s; };
+var money = function(n){ var neg=n<0; var s=String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g,' '); return (neg?'−':'')+s+' €'; };
+var num = function(v){ v=+v; return (isFinite(v)&&v>0) ? Math.min(Math.floor(v),MAXV) : 0; };
+var PID = /^p[a-z0-9]{4}$/;
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){ return null; } }
+
+var room = null, roomChecked = false;
+var G = null;            // käynnissä oleva peli
+var cur = '', homeMsg = '', rcache = {};
+var ui = {to:null, overS:false, overD:false, leave:false};
+var toastQ = [], toastOn = false, toastTimer = null, uiTimer = null;
+
+/* ---------- verkkoyhteys: julkinen MQTT-välittäjä (ei kirjautumista, ei tilejä) ----------
+   Tarjoaa saman rajapinnan kuin aiempi "room": peers(), presence(), onPeers(). */
+var BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+var NS = 'monopolin-pankkiiri-v1';
+var PEER_TTL = 20000, BEAT = 5000;
+function connectRoom(){
+  return new Promise(function(resolve){
+    if(typeof mqtt==='undefined'){ resolve(null); return; }
+    var idx = 0;
+    function tryNext(){
+      if(idx>=BROKERS.length){ resolve(null); return; }
+      var url = BROKERS[idx++], done = false, c;
+      try{ c = mqtt.connect(url, {clientId:'pk-'+rid(10), clean:true, reconnectPeriod:2000, connectTimeout:5000, keepalive:30}); }
+      catch(e){ tryNext(); return; }
+      var to = setTimeout(function(){ if(!done){ done = true; try{ c.end(true); }catch(e){} tryNext(); } }, 6000);
+      c.on('error', function(){});
+      c.on('connect', function(){
+        if(done){ return; }
+        done = true; clearTimeout(to);
+        resolve(makeRoom(c));
+      });
+    }
+    tryNext();
   });
 }
+function makeRoom(c){
+  var me = rid(10), mine = {}, others = {}, cbs = [], lastKey = {};
+  var topic = function(g){ return NS+'/g/'+g+'/'+me; };
+  function fire(){ cbs.forEach(function(f){ try{ f(); }catch(e){} }); }
+  function send(replyWanted){
+    if(!mine.g) return;
+    var o = {}; Object.keys(mine).forEach(function(k){ o[k] = mine[k]; });
+    if(replyWanted) o.h = 1;
+    try{ c.publish(topic(mine.g), JSON.stringify(o), {qos:0, retain:false}); }catch(e){}
+  }
+  c.subscribe(NS+'/g/+/+', {qos:0});
+  c.on('connect', function(){ c.subscribe(NS+'/g/+/+', {qos:0}); send(true); });
+  c.on('message', function(t, payload){
+    var p = String(t).split('/'); var id = p[p.length-1];
+    if(id===me) return;
+    var pr; try{ pr = JSON.parse(payload.toString()); }catch(e){ return; }
+    if(!pr || typeof pr!=='object') return;
+    if(pr.gone){ if(others[id]){ delete others[id]; fire(); } return; }
+    var h = pr.h; delete pr.h;
+    var key = JSON.stringify(pr), prev = others[id];
+    others[id] = {presence:pr, seen:Date.now()};
+    if(!prev || lastKey[id]!==key){ lastKey[id] = key; fire(); }
+    if(h && mine.g){ setTimeout(function(){ send(false); }, 50+rand(300)); }
+  });
+  setInterval(function(){
+    var now = Date.now(), ch = false;
+    Object.keys(others).forEach(function(id){ if(now-others[id].seen>PEER_TTL){ delete others[id]; delete lastKey[id]; ch = true; } });
+    send(false);
+    if(ch) fire();
+  }, BEAT);
+  function bye(){
+    if(mine.g){ try{ c.publish(topic(mine.g), JSON.stringify({gone:1}), {qos:0}); }catch(e){} }
+  }
+  window.addEventListener('pagehide', bye);
+  return {
+    peers: function(){
+      var now = Date.now(), out = [];
+      out.push({kind:'viewer', isMe:true, presence:mine});
+      Object.keys(others).forEach(function(id){
+        if(now-others[id].seen<=PEER_TTL) out.push({kind:'viewer', isMe:false, presence:others[id].presence});
+      });
+      return out;
+    },
+    presence: function(obj){
+      var oldG = mine.g;
+      Object.keys(obj).forEach(function(k){ if(obj[k]===null||obj[k]===undefined) delete mine[k]; else mine[k] = obj[k]; });
+      if(oldG && oldG!==mine.g){ try{ c.publish(NS+'/g/'+oldG+'/'+me, JSON.stringify({gone:1}), {qos:0}); }catch(e){} }
+      send(mine.g && mine.g!==oldG);
+      return Promise.resolve();
+    },
+    onPeers: function(cb){ cbs.push(cb); }
+  };
+}
 
-// Tarkista URL-parametri sivun latautuessa (QR-skannauksesta)
-window.addEventListener('load', () => {
-  const params = new URLSearchParams(window.location.search);
-  const joinCode = params.get('join');
-  if (joinCode) {
-    document.getElementById('join-code').value = joinCode.toUpperCase();
-    document.getElementById('join-name').focus();
-    // Vieritä liity-osioon
-    document.getElementById('join-name').scrollIntoView({ behavior: 'smooth' });
+function hashCode(){ var m = /^#(\d{3})$/.exec(location.hash||''); return m ? m[1] : ''; }
+function newCode(){ return String(100+rand(900)); }
+function joinUrl(c){ return (BASE || String(location.href).split('#')[0]) + '#' + c; }
+function qrSvg(text){
+  try{ if(typeof qrcode!=='function') return ''; var q=qrcode(0,'M'); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:0,scalable:true}); }
+  catch(e){ return ''; }
+}
+
+/* ---------- pelin tila: jokaisella pelaajalla oma kirjanpito (vain kasvavia laskureita) ----------
+   saldo = alkusaldo + nostot - pankille maksetut + saadut - lähetetyt.
+   Jokainen puhelin kertoo omat laskurinsa läsnäolotietona ja välittää myös muiden tiedot eteenpäin,
+   joten tilanne säilyy vaikka joku sulkee sivun tai viestejä katoaa. */
+function newEnt(n){ return {n:String(n).slice(0,14), j:Math.floor(Date.now()/1000), s:{}, w:0, d:0, x:0}; }
+function bal(pid){
+  var e = G.L[pid]; if(!e) return 0;
+  var b = G.st + e.w - e.d, y, k;
+  for(y in G.L){ if(G.L[y].s[pid]) b += G.L[y].s[pid]; }
+  for(k in e.s) b -= e.s[k];
+  return b;
+}
+function isBust(pid){ var e = G.L[pid]; return !!(e && e.x); }
+function shown(pid){ return isBust(pid) ? 0 : bal(pid); }
+function plist(){ return Object.keys(G.L).sort(function(a,b){ return (G.L[a].j-G.L[b].j) || (a<b?-1:1); }); }
+function gamePeers(){
+  if(!room || !G) return [];
+  return room.peers().filter(function(p){ return p.kind==='viewer' && p.presence && p.presence.g===G.code; });
+}
+function presentSet(){ var s={}; gamePeers().forEach(function(p){ if(p.presence.pid) s[p.presence.pid]=1; }); return s; }
+function winner(){
+  var ids = plist(); if(!G.ph || ids.length<2) return null;
+  var act = ids.filter(function(p){ return !isBust(p); });
+  return act.length===1 ? act[0] : null;
+}
+
+function mergeL(src){
+  var ch = false, notify = !!(G.pid && G.syncAt && Date.now()>=G.syncAt);
+  Object.keys(src).forEach(function(pid){
+    if(!PID.test(pid)) return;
+    var s = src[pid]; if(!s || typeof s!=='object') return;
+    var e = G.L[pid];
+    if(!e){
+      if(Object.keys(G.L).length>=MAXP) return;
+      e = G.L[pid] = {n:String(s.n||'Pelaaja').slice(0,14), j:num(s.j), s:{}, w:0, d:0, x:0}; ch = true;
+    }
+    var mine = (pid===G.pid);
+    var w = num(s.w); if(w>e.w){ if(notify && !mine) toast('bank', e.n, w-e.w); e.w=w; ch=true; }
+    var d = num(s.d); if(d>e.d){ e.d=d; ch=true; }
+    if(s.x && !e.x){ e.x=1; ch=true; if(notify && !mine) toast('bust', e.n, 0); }
+    if(s.s && typeof s.s==='object') Object.keys(s.s).forEach(function(to){
+      if(!PID.test(to)) return;
+      var v = num(s.s[to]), old = e.s[to]||0;
+      if(v>old){ e.s[to]=v; ch=true; if(notify && !mine && to===G.pid) toast('got', e.n, v-old); }
+    });
+  });
+  return ch;
+}
+function mergeLog(arr){
+  var ch = false;
+  arr.slice(0,20).forEach(function(x){
+    if(!x || typeof x!=='object') return;
+    var i = String(x.i||'').slice(0,24); if(!i || G.lg[i]) return;
+    if(['p','w','d','x','s'].indexOf(x.k)<0) return;
+    G.lg[i] = {i:i, t:num(x.t), k:x.k, f:String(x.f||'').slice(0,5), o:String(x.o||'').slice(0,5), a:num(x.a)}; ch = true;
+  });
+  var ks = Object.keys(G.lg);
+  if(ks.length>60){ ks.sort(function(a,b){ return G.lg[a].t-G.lg[b].t; }).slice(0,ks.length-60).forEach(function(k){ delete G.lg[k]; }); }
+  return ch;
+}
+function addLog(o){
+  o.i = G.pid + Date.now().toString(36) + rid(2); o.t = Math.floor(Date.now()/1000);
+  G.lg[o.i] = o;
+}
+function packL(){
+  var out = {};
+  Object.keys(G.L).forEach(function(pid){
+    var e = G.L[pid], o = {n:e.n, j:e.j};
+    if(e.w) o.w = e.w; if(e.d) o.d = e.d; if(e.x) o.x = 1;
+    var ks = Object.keys(e.s);
+    if(ks.length){ o.s = {}; ks.forEach(function(k){ o.s[k] = e.s[k]; }); }
+    out[pid] = o;
+  });
+  return out;
+}
+function packLog(n){ return Object.keys(G.lg).map(function(k){ return G.lg[k]; }).sort(function(a,b){ return b.t-a.t; }).slice(0,n); }
+function publish(){
+  if(!room || !G || !G.pid) return;
+  var pr = {g:G.code, pid:G.pid, n:G.L[G.pid].n, gid:G.gid, st:G.st, ph:G.ph?1:0, L:packL(), lg:packLog(10)};
+  if(JSON.stringify(pr).length>3600) pr.lg = packLog(3);
+  if(JSON.stringify(pr).length>3800) pr.lg = [];
+  room.presence(pr).catch(function(){});
+  saveCache();
+}
+function saveCache(){
+  if(!G || !G.pid) return;
+  store('pankkiiri-'+G.code, JSON.stringify({pid:G.pid, gid:G.gid, L:packL(), lg:packLog(30), ph:G.ph?1:0, st:G.st, ts:Date.now()}));
+  store('pankkiiri-active', JSON.stringify({code:G.code, name:G.L[G.pid].n, ts:Date.now()}));
+}
+function loadCache(c){
+  try{ var o = JSON.parse(store('pankkiiri-'+c)||'null'); if(o && o.pid && o.L && Date.now()-o.ts<12*3600*1000) return o; }catch(e){}
+  return null;
+}
+function activeGame(){
+  try{ var a = JSON.parse(store('pankkiiri-active')||'null'); if(a && /^\d{3}$/.test(a.code) && Date.now()-a.ts<12*3600*1000 && loadCache(a.code)) return a; }catch(e){}
+  return null;
+}
+
+/* ---------- ilmoitukset ---------- */
+function toast(kind, name, amt){
+  var t = kind==='got' ? {h:'Sait rahaa', a:money(amt), m:name+' lähetti sinulle rahaa'}
+        : kind==='bank' ? {h:'Pankkinosto', a:money(amt), m:name+' nosti pankista'}
+        : {h:'Konkurssi', a:'', m:name+' meni konkurssiin'};
+  t.k = kind; toastQ.push(t);
+  if(!toastOn) nextToast();
+}
+function nextToast(){
+  clearTimeout(toastTimer);
+  var t = toastQ.shift();
+  if(!t){ toastOn = false; $toasts.innerHTML = ''; return; }
+  toastOn = true;
+  try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
+  $toasts.innerHTML = '<div class="ov" role="alertdialog" aria-live="assertive"><div class="tbox '+(t.k==='bust'?'bust':'')+'"><div class="th">'+esc(t.h)+'</div>'+
+    (t.a?'<div class="ta">'+esc(t.a)+'</div>':'')+'<p>'+esc(t.m)+'</p><button class="btn gold" type="button" data-toast="ok">OK</button></div></div>';
+  toastTimer = setTimeout(nextToast, 8000);
+}
+$toasts.addEventListener('click', function(e){ if(e.target.closest('[data-toast]')) nextToast(); });
+
+/* ---------- liittyminen ---------- */
+function afterJoin(){ keepAwake(); }
+function finalize(pid){
+  G.pid = pid; G.syncAt = Date.now()+1500;
+  afterJoin(); publish(); update();
+}
+function tryFinalize(){
+  if(!G || G.pid) return;
+  var ps = gamePeers().filter(function(p){ return !p.isMe && p.presence.L && p.presence.gid; });
+  var age = Date.now()-G.t0;
+  if(!ps.length){
+    if(G.cache && age>1500){ finalize(G.cache.pid); return; }
+    if(age>7000) leaveGame('Peliä ei löytynyt koodilla '+G.code+'.');
+    return;
+  }
+  var gid = ps[0].presence.gid;
+  if(G.gid && G.gid!==gid){ G.gid=null; G.L={}; G.lg={}; G.ph=0; G.stSet=false; G.cache=null; ps.forEach(function(p){ mergeL(p.presence.L); }); }
+  G.gid = gid;
+  if(G.cache && G.cache.gid===G.gid && G.L[G.cache.pid]){ finalize(G.cache.pid); return; }
+  var lname = G.name.toLowerCase(), hit = null, pids = Object.keys(G.L);
+  pids.forEach(function(p){ if(G.L[p].n.toLowerCase()===lname) hit = p; });
+  var present = presentSet();
+  if(hit){
+    if(present[hit] && G.pid!==hit){ leaveGame('Nimi '+G.name+' on jo käytössä tässä pelissä.'); return; }
+    finalize(hit); return;
+  }
+  if(pids.length>=MAXP){ leaveGame('Peli on täynnä ('+MAXP+' pelaajaa).'); return; }
+  var pid; do{ pid = 'p'+rid(4); }while(G.L[pid]);
+  G.L[pid] = newEnt(G.name); finalize(pid);
+}
+function createGame(){
+  if(!room) return;
+  var n = readName('cname'); if(!n) return;
+  var st = parseInt(document.getElementById('cst').value,10);
+  if(!(st>=100 && st<=100000)){ inlineMsg('Aloitussaldo on 100–100 000 €.'); return; }
+  var used = {}; room.peers().forEach(function(p){ if(p.presence && p.presence.g) used[p.presence.g]=1; });
+  var c, t = 0; do{ c = newCode(); t++; }while(used[c] && t<40);
+  var pid = 'p'+rid(4);
+  G = {code:c, name:n, gid:'g'+rid(5), pid:pid, st:st, stSet:true, ph:0, L:{}, lg:{}, t0:Date.now(), syncAt:Date.now()+1500, cache:null};
+  G.L[pid] = newEnt(n);
+  homeMsg = ''; ui.to = null; afterJoin(); publish(); update();
+}
+function joinGame(c, n){
+  if(!room) return;
+  var ca = loadCache(c);
+  G = {code:c, name:n, pid:null, gid:null, st:1500, stSet:false, ph:0, L:{}, lg:{}, t0:Date.now(), syncAt:0, cache:ca};
+  if(ca){ G.gid = ca.gid; G.st = ca.st; G.stSet = true; G.ph = ca.ph?1:0; mergeL(ca.L); mergeLog(ca.lg||[]); }
+  room.presence({g:c, n:n}).catch(function(){});
+  homeMsg = ''; ui.to = null; update(); onChange();
+}
+function joinFromForm(){
+  if(!room) return;
+  var n = readName('jname'); if(!n) return;
+  var c = (document.getElementById('code').value||'').trim();
+  if(!/^\d{3}$/.test(c)){ inlineMsg('Koodissa on 3 numeroa.'); return; }
+  joinGame(c, n);
+}
+function leaveGame(msg){
+  if(G){ store('pankkiiri-'+G.code, null); }
+  store('pankkiiri-active', null);
+  if(room) room.presence({g:null, pid:null, n:null, gid:null, st:null, ph:null, L:null, lg:null}).catch(function(){});
+  G = null; ui = {to:null, overS:false, overD:false, leave:false};
+  toastQ = []; nextToast();
+  homeMsg = msg||''; showHome();
+}
+
+/* ---------- toiminnot ---------- */
+function readName(id){
+  var el = document.getElementById(id), n = el ? el.value.trim().slice(0,14) : '';
+  if(!n){ if(el) el.focus(); inlineMsg('Kirjoita ensin nimesi.'); return ''; }
+  store('pankkiiri-name', n); return n;
+}
+function inlineMsg(t){ var el = document.getElementById('net'); if(el){ el.textContent = t; el.className = 'net bad'; } }
+function readAmt(id){ var el = document.getElementById(id), v = el ? parseInt(el.value,10) : 0; return (v>0 && v<=1000000) ? v : 0; }
+function arm(key){ ui[key] = true; clearTimeout(uiTimer); uiTimer = setTimeout(function(){ ui.overS = ui.overD = ui.leave = false; if(G&&G.pid) syncControls(); }, 4000); }
+function disarm(){ ui.overS = ui.overD = false; }
+function settle(){
+  var me = G.pid, e = G.L[me];
+  if(bal(me)<0 && !e.x){ e.x = 1; addLog({k:'x', f:me}); }
+}
+function say(id, t){ var el = document.getElementById(id); if(el){ el.textContent = t; clearTimeout(say[id]); say[id] = setTimeout(function(){ el.textContent=''; }, 2800); } }
+function doSend(){
+  var me = G.pid, to = ui.to;
+  if(isBust(me) || !to || !G.L[to] || isBust(to)) return;
+  var a = readAmt('amt'); if(!a) return;
+  if(a>bal(me) && !ui.overS){ arm('overS'); syncControls(); return; }
+  var e = G.L[me]; e.s[to] = (e.s[to]||0)+a;
+  addLog({k:'p', f:me, o:to, a:a});
+  settle(); disarm();
+  document.getElementById('amt').value = '';
+  say('smsg', 'Lähetit '+money(a)+' pelaajalle '+G.L[to].n+'.');
+  publish(); update();
+}
+function doWithdraw(){
+  var me = G.pid; if(isBust(me)) return;
+  var a = readAmt('bamt'); if(!a) return;
+  G.L[me].w += a; addLog({k:'w', f:me, a:a});
+  document.getElementById('bamt').value = ''; disarm();
+  say('bmsg', 'Nostit '+money(a)+' pankista.');
+  publish(); update();
+}
+function doDeposit(){
+  var me = G.pid; if(isBust(me)) return;
+  var a = readAmt('bamt'); if(!a) return;
+  if(a>bal(me) && !ui.overD){ arm('overD'); syncControls(); return; }
+  G.L[me].d += a; addLog({k:'d', f:me, a:a});
+  settle(); disarm();
+  document.getElementById('bamt').value = '';
+  say('bmsg', 'Maksoit '+money(a)+' pankille.');
+  publish(); update();
+}
+function startGame(){
+  if(!G || !G.pid || G.ph || plist().length<2) return;
+  G.ph = 1; addLog({k:'s'}); publish(); update();
+}
+
+/* ---------- näkymät ---------- */
+function setHtml(id, html){
+  var el = document.getElementById(id); if(!el) return;
+  if(rcache[id]===html) return;
+  rcache[id] = html; el.innerHTML = html;
+}
+function showHome(){
+  cur = 'home'; rcache = {};
+  var saved = store('pankkiiri-name') || '';
+  var pre = hashCode(), act = activeGame();
+  var nameIn = function(id){ return '<input type="text" id="'+id+'" maxlength="14" autocomplete="nickname" value="'+esc(saved)+'">'; };
+  var createInner =
+    '<h2>Luo uusi peli</h2>'+
+    '<p class="hint">Saat pelikoodin ja QR-koodin, jolla muut liittyvät. Kaikki aloittavat samalla saldolla.</p>'+
+    '<div><label for="cname">Nimesi</label>'+nameIn('cname')+'</div>'+
+    '<div><label for="cst">Aloitussaldo (€)</label><input type="number" id="cst" inputmode="numeric" value="1500" min="100" max="100000"></div>'+
+    '<button class="btn gold" type="button" data-act="create" id="bcreate">Luo peli</button>';
+  var joinCard =
+    '<div class="sheet"><h2>'+(pre?'Liity peliin '+esc(pre):'Liity peliin')+'</h2>'+
+    '<p class="hint">'+(pre?'Koodi on jo täytetty. Kirjoita nimesi ja liity.':'Kirjoita koodi tai skannaa QR-koodi toisen pelaajan puhelimesta.')+'</p>'+
+    '<div><label for="jname">Nimesi</label>'+nameIn('jname')+'</div>'+
+    '<div><label for="code">Pelikoodi</label><input type="text" id="code" maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" value="'+esc(pre)+'"></div>'+
+    '<button class="btn'+(pre?' gold':'')+'" type="button" data-act="join" id="bjoin">Liity peliin</button></div>';
+  var resume = act ? '<div class="sheet"><h2>Peli '+esc(act.code)+' on kesken</h2><p class="hint">Olit mukana nimellä '+esc(act.name)+'. Saldosi säilyy.</p><button class="btn gold" type="button" data-act="resume" id="bresume">Palaa peliin</button></div>' : '';
+  $app.innerHTML =
+    '<div><p class="tab">Pankki · 2–8 pelaajaa</p><h1 class="word">Monopolin Pankkiiri</h1></div>'+
+    (pre||act?'':'<p class="lede">Jokainen pelaa omalla puhelimellaan. Raha liikkuu pelaajien ja pankin välillä, ja saldot päivittyvät kaikille heti.</p>')+
+    (homeMsg?'<p class="note">'+esc(homeMsg)+'</p>':'')+
+    resume+
+    (pre ? joinCard+'<details class="sheet"><summary>Luo sen sijaan oma peli</summary>'+createInner+'</details>'
+         : '<div class="sheet">'+createInner+'</div>'+joinCard)+
+    '<p class="net" id="net"></p>';
+  updateNet();
+}
+function updateNet(){
+  var el = document.getElementById('net'); if(!el) return;
+  ['bcreate','bjoin','bresume'].forEach(function(id){ var b = document.getElementById(id); if(b) b.disabled = (!room && roomChecked); });
+  if(!roomChecked){ el.textContent = 'Yhdistetään…'; el.className = 'net'; }
+  else if(!room){ el.textContent = 'Yhteyttä ei saatu. Tarkista internetyhteys ja lataa sivu uudelleen.'; el.className = 'net bad'; }
+  else if(el.className==='net'){ el.textContent = ''; }
+}
+function inviteHtml(){
+  var svg = qrSvg(joinUrl(G.code));
+  return '<p class="hint">Muut skannaavat QR-koodin tai kirjoittavat koodin sivun alussa.</p>'+
+    '<h1 class="word codebig" aria-label="Pelikoodi">'+esc(G.code)+'</h1>'+
+    (svg?'<div class="qr" aria-label="QR-koodi pelin liittymiseen">'+svg+'</div>':'');
+}
+function build(key){
+  cur = key; rcache = {};
+  if(key==='wait'){
+    $app.innerHTML = '<div class="sheet"><h2>Haetaan peliä '+esc(G.code)+'</h2><p class="hint">Tämä kestää hetken.</p></div><button class="btn ghost" type="button" data-act="leave">Peruuta</button>';
+  } else if(key==='lobby'){
+    $app.innerHTML =
+      '<div><p class="tab">Pelihuone</p><h1 class="word">Odotushuone</h1></div>'+
+      '<div class="sheet">'+inviteHtml()+'</div>'+
+      '<div class="sheet"><h2 id="lobby-h">Pelaajat</h2><ul class="pl" id="lobby-pl"></ul></div>'+
+      '<div class="sheet"><p class="hint">Alkusaldo '+esc(money(G.st))+'. Kuka tahansa pelaajista voi aloittaa pelin.</p>'+
+      '<button class="btn gold" type="button" data-act="start" id="bstart">Aloita peli</button><p class="hint" id="lobby-hint"></p></div>'+
+      '<button class="btn ghost" type="button" data-act="leave" id="bleave">Poistu</button>';
+  } else {
+    $app.innerHTML =
+      '<div id="win"></div>'+
+      '<div class="me-box"><div class="me-name" id="me-name"></div><div class="me-bal" id="me-bal"></div><div id="me-stamp"></div></div>'+
+      '<div class="sheet"><h2>Lähetä rahaa pelaajalle</h2>'+
+        '<div class="rc" id="rc"></div>'+
+        '<div class="chips"><button class="chip" type="button" data-q="50">50</button><button class="chip" type="button" data-q="100">100</button><button class="chip" type="button" data-q="200">200</button><button class="chip" type="button" data-q="500">500</button></div>'+
+        '<div><label for="amt">Summa (€)</label><input type="number" id="amt" inputmode="numeric" min="1" placeholder="Summa"></div>'+
+        '<button class="btn gold" type="button" data-act="send" id="bsend">Valitse vastaanottaja</button><div class="ok" id="smsg"></div></div>'+
+      '<div class="sheet"><h2>Pankki</h2>'+
+        '<div class="chips"><button class="chip" type="button" data-bq="50">50</button><button class="chip" type="button" data-bq="100">100</button><button class="chip" type="button" data-bq="200">200</button></div>'+
+        '<div><label for="bamt">Summa (€)</label><input type="number" id="bamt" inputmode="numeric" min="1" placeholder="Summa"></div>'+
+        '<div class="row"><button class="btn gold" type="button" data-act="withdraw" id="bwd">Nosta pankista</button><button class="btn" type="button" data-act="deposit" id="bdp">Maksa pankille</button></div><div class="ok" id="bmsg"></div></div>'+
+      '<div class="sheet"><h2>Tapahtumat</h2><div class="log" id="log"></div></div>'+
+      '<details class="sheet"><summary>Kutsu pelaajia</summary>'+inviteHtml()+'</details>'+
+      '<button class="btn ghost" type="button" data-act="leave" id="bleave">Poistu pelistä</button>';
+  }
+}
+function update(){
+  if(!G){ if(cur!=='home') showHome(); else updateNet(); return; }
+  var key = !G.pid ? 'wait' : (G.ph ? 'game' : 'lobby');
+  if(key!==cur) build(key);
+  if(key==='lobby') fillLobby(); else if(key==='game') fillGame();
+}
+function fillLobby(){
+  var ids = plist(), pres = presentSet();
+  document.getElementById('lobby-h').textContent = 'Pelaajat ('+ids.length+')';
+  setHtml('lobby-pl', ids.map(function(p){
+    return '<li><span class="pn"><span class="dot'+(pres[p]?'':' off')+'"></span>'+esc(G.L[p].n)+(p===G.pid?'<span class="badge">sinä</span>':'')+'</span></li>';
+  }).join(''));
+  var b = document.getElementById('bstart'); if(b) b.disabled = ids.length<2;
+  var h = document.getElementById('lobby-hint'); if(h) h.textContent = ids.length<2 ? 'Tarvitaan vähintään 2 pelaajaa.' : '';
+  var l = document.getElementById('bleave'); if(l){ l.textContent = ui.leave ? 'Varmista: poistu' : 'Poistu'; }
+}
+var LOGT = {
+  p: function(x){ return [nm(x.f)+' → '+nm(x.o), money(x.a)]; },
+  w: function(x){ return [nm(x.f)+' nosti pankista', '+'+money(x.a)]; },
+  d: function(x){ return [nm(x.f)+' maksoi pankille', '−'+money(x.a)]; },
+  x: function(x){ return [nm(x.f)+' meni konkurssiin', '']; },
+  s: function(){ return ['Peli alkoi', '']; }
+};
+function nm(pid){ return G.L[pid] ? G.L[pid].n : 'Pelaaja'; }
+function fillGame(){
+  var me = G.pid, bust = isBust(me), ids = plist(), pres = presentSet();
+  var w = winner();
+  setHtml('win', w ? '<div class="win">'+esc(nm(w))+' voitti pelin</div>' : '');
+  document.getElementById('me-name').textContent = nm(me);
+  var b = shown(me), el = document.getElementById('me-bal');
+  el.textContent = money(b); el.className = 'me-bal'+((bust||b<200)?' low':'');
+  setHtml('me-stamp', bust ? '<span class="stamp">Konkurssi</span>' : '');
+  var others = ids.filter(function(p){ return p!==me; });
+  if(ui.to && (!G.L[ui.to] || isBust(ui.to))) ui.to = null;
+  if(!ui.to){ var open = others.filter(function(p){ return !isBust(p); }); if(open.length===1) ui.to = open[0]; }
+  setHtml('rc', others.length ? others.map(function(p){
+    var bp = isBust(p);
+    return '<button class="rcp'+(ui.to===p?' sel':'')+'" type="button" data-to="'+p+'"'+(bp||bust?' disabled':'')+'><b><span class="dot'+(pres[p]?'':' off')+'"></span>'+esc(G.L[p].n)+'</b><span>'+(bp?'konkurssi':esc(money(shown(p))))+'</span></button>';
+  }).join('') : '<p class="hint">Ei muita pelaajia. Kutsu heidät alta.</p>');
+  var ents = Object.keys(G.lg).map(function(k){ return G.lg[k]; }).sort(function(a,b){ return b.t-a.t; }).slice(0,30);
+  setHtml('log', ents.length ? ents.map(function(x){
+    var r = (LOGT[x.k]||LOGT.s)(x);
+    var t = new Date(x.t*1000).toLocaleTimeString('fi-FI',{hour:'2-digit',minute:'2-digit'});
+    return '<div><span>'+esc(t)+' · '+esc(r[0])+'</span><b>'+esc(r[1])+'</b></div>';
+  }).join('') : '<p class="hint">Ei tapahtumia vielä.</p>');
+  var l = document.getElementById('bleave'); if(l) l.textContent = ui.leave ? 'Varmista: poistu pelistä' : 'Poistu pelistä';
+  syncControls();
+}
+function syncControls(){
+  if(cur!=='game' || !G || !G.pid) return;
+  var me = G.pid, bust = isBust(me), my = bal(me);
+  var a = readAmt('amt'), ba = readAmt('bamt');
+  var s = document.getElementById('bsend');
+  var amt = document.getElementById('amt'), bamt = document.getElementById('bamt');
+  amt.disabled = bust; bamt.disabled = bust;
+  s.className = 'btn gold'; s.disabled = true;
+  if(bust){ s.textContent = 'Olet konkurssissa'; }
+  else if(!ui.to){ s.textContent = 'Valitse vastaanottaja'; }
+  else if(!a){ s.textContent = 'Syötä summa'; }
+  else if(a>my){
+    s.disabled = false; s.className = 'btn red'+(ui.overS?' armed':'');
+    s.textContent = ui.overS ? 'Varmista: maksa ja mene konkurssiin' : 'Saldo ei riitä. Maksa silti';
+  } else { s.disabled = false; s.textContent = 'Lähetä '+money(a)+' → '+nm(ui.to); }
+  var wd = document.getElementById('bwd'), dp = document.getElementById('bdp');
+  wd.disabled = bust || !ba; dp.disabled = bust || !ba;
+  dp.className = (!bust && ba>my) ? 'btn red'+(ui.overD?' armed':'') : 'btn';
+  dp.textContent = (!bust && ba>my) ? (ui.overD ? 'Varmista: maksa ja mene konkurssiin' : 'Saldo ei riitä. Maksa silti') : 'Maksa pankille';
+}
+
+/* ---------- huoneen muutokset ---------- */
+function onChange(){
+  if(!G){ if(cur==='home') updateNet(); return; }
+  var ch = false;
+  gamePeers().forEach(function(p){
+    var pr = p.presence;
+    if(typeof pr.ph==='number' && pr.ph>0 && !G.ph){ G.ph = 1; ch = true; }
+    if(!G.stSet && typeof pr.st==='number' && pr.st>=100 && pr.st<=100000){ G.st = pr.st; G.stSet = true; ch = true; }
+    if(pr.L && typeof pr.L==='object') ch = mergeL(pr.L) || ch;
+    if(Array.isArray(pr.lg)) ch = mergeLog(pr.lg) || ch;
+  });
+  tryFinalize();
+  if(!G) return;
+  if(G.pid && ch) publish();
+  update();
+}
+
+/* ---------- tapahtumat ---------- */
+$app.addEventListener('click', function(e){
+  var t;
+  if((t = e.target.closest('[data-to]'))){ ui.to = t.getAttribute('data-to'); disarm(); fillGame(); return; }
+  if((t = e.target.closest('[data-q]'))){ document.getElementById('amt').value = t.getAttribute('data-q'); disarm(); syncControls(); return; }
+  if((t = e.target.closest('[data-bq]'))){ document.getElementById('bamt').value = t.getAttribute('data-bq'); disarm(); syncControls(); return; }
+  t = e.target.closest('[data-act]'); if(!t) return;
+  var act = t.getAttribute('data-act');
+  if(act==='create') createGame();
+  else if(act==='join') joinFromForm();
+  else if(act==='resume'){ var a = activeGame(); if(a) joinGame(a.code, a.name); }
+  else if(act==='start') startGame();
+  else if(act==='send' && G && G.pid) doSend();
+  else if(act==='withdraw' && G && G.pid) doWithdraw();
+  else if(act==='deposit' && G && G.pid) doDeposit();
+  else if(act==='leave'){
+    if(!G || !G.pid || ui.leave){ leaveGame(''); }
+    else { arm('leave'); update(); }
   }
 });
+$app.addEventListener('input', function(e){
+  if(e.target.id==='code') e.target.value = e.target.value.replace(/\D/g,'').slice(0,3);
+  if(e.target.id==='amt' || e.target.id==='bamt'){ disarm(); syncControls(); }
+});
+window.addEventListener('hashchange', function(){ if(!G){ var c = hashCode(), el = document.getElementById('code'); if(el && c) el.value = c; } });
+setInterval(function(){ if(G && !G.pid) tryFinalize(); }, 500);
 
-function genId() {
-  return Math.random().toString(36).substring(2,10);
-}
-
-// ========== LUOMINEN ==========
-async function createGame() {
-  const name = document.getElementById('create-name').value.trim();
-  const balance = parseInt(document.getElementById('create-balance').value) || 1500;
-  if (!name) { alert('Kirjoita nimesi!'); return; }
-
-  myName = name;
-  myId = genId();
-  gameCode = genCode();
-  isHost = true;
-
-  const player = { id: myId, name: myName, balance, bankrupt: false };
-  await db.ref(`games/${gameCode}`).set({
-    status: 'lobby',
-    startBalance: balance,
-    hostId: myId,
-    players: { [myId]: player },
-    log: { init: { text: 'Peli luotu', amount: '', ts: Date.now() } }
-  });
-
-  showScreen('lobby');
-  document.getElementById('lobby-code').textContent = gameCode;
-  listenGame();
-  generateQR(gameCode);
-}
-
-// ========== LIITTYMINEN ==========
-async function joinGame() {
-  const name = document.getElementById('join-name').value.trim();
-  const code = document.getElementById('join-code').value.trim().toUpperCase();
-  const err = document.getElementById('join-error');
-  err.textContent = '';
-
-  if (!name) { err.textContent = 'Kirjoita nimesi.'; return; }
-  if (code.length !== 4) { err.textContent = 'Kirjoita 4-kirjaiminen koodi.'; return; }
-
-  const snap = await db.ref(`games/${code}`).get();
-  if (!snap.exists()) { err.textContent = 'Peliä ei löydy. Tarkista koodi.'; return; }
-  const data = snap.val();
-  if (data.status === 'started') { err.textContent = 'Peli on jo alkanut.'; return; }
-
-  // Tarkista ettei sama nimi ole jo pelissä
-  const existingPlayers = Object.values(data.players || {});
-  const nameTaken = existingPlayers.some(p => p.name.toLowerCase() === name.toLowerCase());
-  if (nameTaken) { err.textContent = 'Tämä nimi on jo käytössä pelissä. Valitse toinen nimi.'; return; }
-
-  myName = name;
-  myId = genId();
-  gameCode = code;
-  isHost = false;
-
-  await db.ref(`games/${gameCode}/players/${myId}`).set({
-    id: myId, name: myName, balance: data.startBalance, bankrupt: false
-  });
-
-  showScreen('waiting');
-  document.getElementById('waiting-code').textContent = gameCode;
-  listenGame();
-}
-
-// ========== KUUNTELU ==========
-function listenGame() {
-  gameRef = db.ref(`games/${gameCode}`);
-  gameRef.on('value', snap => {
-    if (!snap.exists()) return;
-    gameData = snap.val();
-    updateUI();
-  });
-}
-
-function updateUI() {
-  const players = gameData.players || {};
-  const status = gameData.status;
-
-  if (status === 'lobby') {
-    renderLobbyPlayers(players);
-  } else if (status === 'waiting') {
-    renderWaitingPlayers(players);
-  } else if (status === 'started') {
-    if (document.getElementById('screen-game').style.display === 'none') {
-      showScreen('game');
+/* ---------- näyttö pysyy päällä ---------- */
+var wl = null;
+function keepAwake(){
+  try{
+    if(navigator.wakeLock && G && G.pid && !wl){
+      navigator.wakeLock.request('screen').then(function(l){ wl = l; l.addEventListener('release', function(){ wl = null; }); }).catch(function(){});
     }
-    renderGame(players);
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') keepAwake(); });
+
+/* ---------- käynnistys ---------- */
+showHome();
+(async function(){
+  try{ room = await connectRoom(); }catch(e){ room = null; }
+  roomChecked = true;
+  if(room){
+    room.onPeers(onChange);
   }
-}
+  if(!G) updateNet();
+})();
+})();
 
-function renderLobbyPlayers(players) {
-  const el = document.getElementById('lobby-players');
-  el.innerHTML = Object.values(players).map(p =>
-    `<div class="player-row"><span class="pname">${p.name}${p.id===myId?' (sinä)':''}</span><span class="pbal">${p.balance}€</span></div>`
-  ).join('');
-}
-
-function renderWaitingPlayers(players) {
-  const el = document.getElementById('waiting-players');
-  el.innerHTML = Object.values(players).map(p =>
-    `<div class="player-row"><span class="pname">${p.name}${p.id===myId?' (sinä)':''}</span></div>`
-  ).join('');
-}
-
-function renderGame(players) {
-  const me = players[myId];
-  if (!me) return;
-
-  // Oma saldo
-  document.getElementById('my-name-display').textContent = me.name;
-  const balEl = document.getElementById('my-balance-display');
-  balEl.innerHTML = `${me.balance.toLocaleString('fi-FI')}<span class="balance-euro">€</span>`;
-  balEl.className = 'my-balance-num' + (me.balance < 200 ? ' low' : '');
-
-  // Muut pelaajat (lähetä rahaa)
-  const gameEl = document.getElementById('game-players');
-  const others = Object.values(players).filter(p => p.id !== myId);
-  gameEl.innerHTML = others.map(p => `
-    <div class="player-row${p.bankrupt?' bankrupt':''}${selectedTarget===p.id?' selected':''}"
-         onclick="selectTarget('${p.id}')">
-      <span class="pname">${p.name}${p.bankrupt?' ☠':''}${p.id===gameData.hostId?' 👑':''}</span>
-      <span class="pbal${p.balance<200?' low':''}">${p.balance.toLocaleString('fi-FI')}€</span>
-    </div>`).join('') || '<div style="font-size:0.75rem;color:rgba(245,240,232,0.3);">Ei muita pelaajia</div>';
-
-  // Loki
-  const log = gameData.log || {};
-  const logEl = document.getElementById('log-list');
-  const entries = Object.values(log).sort((a,b) => (b.ts||0)-(a.ts||0)).slice(0,30);
-  logEl.innerHTML = entries.map(e =>
-    `<div class="log-item"><span>${e.text}</span><span class="log-amt">${e.amount||''}</span></div>`
-  ).join('') || '<div class="log-item"><span>Ei tapahtumia</span></div>';
-
-  // Voittaja
-  const active = Object.values(players).filter(p => !p.bankrupt);
-  if (active.length === 1 && Object.values(players).length > 1) {
-    document.getElementById('winner-container').innerHTML =
-      '<div class="winner-banner"><h2>\u{1F3C6} ' + active[0].name + ' voitti!</h2><p style="font-size:0.8rem;color:rgba(245,240,232,0.5)">Onnittelut!</p></div>';
-  }
-
-  // Ilmoitukset
-  const notif = gameData.notification;
-  if (notif && notif.ts > Date.now() - 4000) {
-    if (notif.type === 'transfer' && notif.toId === myId && notif.ts !== lastNotifTs) {
-      lastNotifTs = notif.ts;
-      showToast('\u{1F4B8}', 'Sait rahaa!', notif.fromName + ' lahetti sinulle ' + notif.amount + '\u20AC');
-    } else if (notif.type === 'bank_withdraw' && notif.toId === 'all' && notif.fromName !== myName && notif.ts !== lastNotifTs) {
-      lastNotifTs = notif.ts;
-      showToast('\u{1F3E6}', 'Pankkinosto!', notif.fromName + ' nosti pankista ' + notif.amount + '\u20AC');
-    } else if (notif.type === 'bankrupt' && notif.toId === 'all' && notif.fromName !== myName && notif.ts !== lastNotifTs) {
-      lastNotifTs = notif.ts;
-      showToast('\u2620\uFE0F', 'Konkurssi!', notif.fromName + ' meni konkurssiin!');
-    }
-  }
-}
-
-// ========== TOIMINNOT ==========
-async function startGame() {
-  await db.ref(`games/${gameCode}/status`).set('started');
-  await addLog('Peli alkoi!', '');
-}
-
-function selectTarget(id) {
-  selectedTarget = id;
-  updateUI();
-}
-
-function setAmt(n) {
-  document.getElementById('send-amount').value = n;
-}
-
-async function sendMoney() {
-  const err = document.getElementById('send-error');
-  const suc = document.getElementById('send-success');
-  err.textContent = ''; suc.textContent = '';
-
-  if (!selectedTarget) { err.textContent = 'Valitse vastaanottaja ensin.'; return; }
-  const amt = parseInt(document.getElementById('send-amount').value);
-  if (!amt || amt <= 0) { err.textContent = 'Syötä kelvollinen summa.'; return; }
-
-  const me = gameData.players[myId];
-  const target = gameData.players[selectedTarget];
-  if (!me || !target) return;
-  if (me.balance < amt) { err.textContent = 'Sinulla ei ole tarpeeksi rahaa.'; return; }
-
-  const newBalance = me.balance - amt;
-  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(newBalance);
-  await db.ref(`games/${gameCode}/players/${selectedTarget}/balance`).set(target.balance + amt);
-  await addLog(`${me.name} → ${target.name}`, `${amt}€`);
-  await db.ref(`games/${gameCode}/notification`).set({
-    type: 'transfer',
-    toId: selectedTarget,
-    fromName: me.name,
-    amount: amt,
-    ts: Date.now()
+/* ---------- koko näytön tila ---------- */
+(function(){
+  var de = document.documentElement, bt = document.getElementById('fsbtn'), bar = document.getElementById('topbar');
+  var can = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled) && !!(de.requestFullscreen || de.webkitRequestFullscreen);
+  if(!bt || !can) return;
+  var IN = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 6V1h5M10 1h5v5M15 10v5h-5M6 15H1v-5"/></svg>';
+  var OUT = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 1v5H1M15 6h-5V1M10 15v-5h5M1 10h5v5"/></svg>';
+  function isFs(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function upd(){ bt.innerHTML = (isFs()?OUT:IN)+'<span>'+(isFs()?'Poistu koko näytöstä':'Koko näyttö')+'</span>'; }
+  bt.addEventListener('click', function(){
+    try{
+      if(isFs()){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); }
+      else {
+        var p = (de.requestFullscreen||de.webkitRequestFullscreen).call(de);
+        if(p && p.catch) p.catch(function(){});
+      }
+    }catch(e){}
   });
-
-  // Automaattinen konkurssi jos saldo menee miinukselle
-  if (newBalance < 0) {
-    await db.ref(`games/${gameCode}/players/${myId}`).update({ bankrupt: true, balance: 0 });
-    await addLog(`${me.name} meni konkurssiin!`, '☠');
-    await db.ref(`games/${gameCode}/notification`).set({
-      type: 'bankrupt',
-      toId: 'all',
-      fromName: me.name,
-      amount: 0,
-      ts: Date.now() + 1
-    });
-  }
-
-  document.getElementById('send-amount').value = '';
-  suc.textContent = newBalance < 0 ? `Menit konkurssiin!` : `Lähetit ${amt}€ pelaajalle ${target.name}!`;
-  setTimeout(() => suc.textContent = '', 2500);
-}
-
-
-function setBankAmt(n) {
-  document.getElementById('bank-amount').value = n;
-}
-
-async function withdrawFromBank() {
-  const err = document.getElementById('bank-error');
-  const suc = document.getElementById('bank-success');
-  err.textContent = ''; suc.textContent = '';
-  const amt = parseInt(document.getElementById('bank-amount').value);
-  if (!amt || amt <= 0) { err.textContent = 'Syötä kelvollinen summa.'; return; }
-  const me = gameData.players[myId];
-  if (!me) return;
-  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance + amt);
-  await addLog(`${me.name} nosti pankista`, `+${amt}€`);
-  await db.ref(`games/${gameCode}/notification`).set({
-    type: 'bank_withdraw',
-    toId: 'all',
-    fromName: me.name,
-    amount: amt,
-    ts: Date.now()
-  });
-  document.getElementById('bank-amount').value = '';
-  suc.textContent = `Nostit ${amt}€ pankista!`;
-  setTimeout(() => suc.textContent = '', 2500);
-}
-
-async function payToBank() {
-  const err = document.getElementById('bank-error');
-  const suc = document.getElementById('bank-success');
-  err.textContent = ''; suc.textContent = '';
-  const amt = parseInt(document.getElementById('bank-amount').value);
-  if (!amt || amt <= 0) { err.textContent = 'Syötä kelvollinen summa.'; return; }
-  const me = gameData.players[myId];
-  if (!me) return;
-  if (me.balance < amt) { err.textContent = 'Sinulla ei ole tarpeeksi rahaa.'; return; }
-  await db.ref(`games/${gameCode}/players/${myId}/balance`).set(me.balance - amt);
-  await addLog(`${me.name} maksoi pankille`, `-${amt}€`);
-  document.getElementById('bank-amount').value = '';
-  suc.textContent = `Maksoit ${amt}€ pankille!`;
-  setTimeout(() => suc.textContent = '', 2500);
-}
-
-async function addLog(text, amount) {
-  const key = Date.now().toString();
-  await db.ref(`games/${gameCode}/log/${key}`).set({ text, amount, ts: Date.now() });
-}
-
-function showToast(icon, title, msg) {
-  if (document.getElementById('toast-overlay')) return;
-  const el = document.createElement('div');
-  el.id = 'toast-overlay';
-  el.className = 'toast-overlay';
-  el.innerHTML = `
-    <div class="toast-box">
-      <div class="toast-icon">${icon}</div>
-      <div class="toast-title">${title}</div>
-      <div class="toast-msg">${msg}</div>
-      <button class="toast-close" onclick="document.getElementById('toast-overlay').remove()">OK</button>
-    </div>`;
-  document.body.appendChild(el);
-  setTimeout(() => { const t = document.getElementById('toast-overlay'); if(t) t.remove(); }, 6000);
-}
-
-// ========== APUFUNKTIOT ==========
-function showScreen(name) {
-  ['start','lobby','waiting','game'].forEach(s => {
-    document.getElementById(`screen-${s}`).style.display = s === name ? 'block' : 'none';
-  });
-  // Piilota header kun ollaan pelissä
-  document.getElementById('main-header').style.display = name === 'game' ? 'none' : 'block';
-}
-
-// ========== KOKO NÄYTTÖ ==========
-function fsElement() {
-  return document.fullscreenElement || document.webkitFullscreenElement;
-}
-function toggleFullscreen() {
-  const el = document.documentElement;
-  if (fsElement()) {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-  } else {
-    const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) req.call(el).catch(() => {});
-  }
-}
-function updateFsBtn() {
-  document.getElementById('fs-btn').textContent = fsElement() ? '✕' : '⛶';
-}
-document.addEventListener('fullscreenchange', updateFsBtn);
-document.addEventListener('webkitfullscreenchange', updateFsBtn);
-(function () {
-  const supported = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-  if (supported) document.getElementById('fs-btn').style.display = 'flex';
+  document.addEventListener('fullscreenchange', upd);
+  document.addEventListener('webkitfullscreenchange', upd);
+  upd(); bar.hidden = false;
 })();
 </script>
-</body>
-</html>
+
+</body></html>
